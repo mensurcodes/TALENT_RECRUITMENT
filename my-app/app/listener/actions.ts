@@ -236,6 +236,36 @@ GitHub / codebase context:\n${codebaseDigest.slice(0, 6000)}`;
   return { job, applicant, generated };
 }
 
+export async function transcribeVideoAnswer(
+  formData: FormData,
+): Promise<{ text: string } | { error: string }> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    return { error: "Add OPENAI_API_KEY to transcribe video answers (Whisper)." };
+  }
+  const file = formData.get("file");
+  if (!(file instanceof Blob) || file.size === 0) {
+    return { error: "No video recording was uploaded." };
+  }
+  const outbound = new FormData();
+  outbound.append("file", file, "answer.webm");
+  outbound.append("model", "whisper-1");
+  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+    body: outbound,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    return { error: `Transcription failed (${res.status}). ${err.slice(0, 180)}` };
+  }
+  const data = (await res.json()) as { text?: string };
+  if (!data.text?.trim()) {
+    return { error: "Transcription returned empty text. Try again or use the text box." };
+  }
+  return { text: data.text.trim() };
+}
+
 export async function evaluateWithRubric(input: {
   job: JobRow;
   generated: GeneratedAssessment;

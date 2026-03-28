@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { evaluateWithRubric } from "../../../actions";
+import { evaluateWithRubric, transcribeVideoAnswer } from "../../../actions";
+import { VideoAnswerRecorder } from "../../../components/VideoAnswerRecorder";
 import type { AssessmentQuestion, StoredAssessment } from "../../../types";
 import { LISTENER_ASSESSMENT_KEY } from "../../../types";
 
@@ -37,10 +38,12 @@ export function AssessmentRunner({
   const [answerLeft, setAnswerLeft] = useState(0);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const submitting = useRef(false);
   const draftRef = useRef("");
   draftRef.current = draft;
+  const videoBlobRef = useRef<Blob | null>(null);
 
   const goNextRef = useRef<(text: string, auto: boolean) => Promise<void>>(async () => {});
 
@@ -64,6 +67,7 @@ export function AssessmentRunner({
     setAnswerLeft(current.answerSeconds);
     setDraft(stored?.answers[current.id] ?? "");
     setBanner(null);
+    videoBlobRef.current = null;
   }, [index, current?.id, stored]);
 
   useEffect(() => {
@@ -107,17 +111,48 @@ export function AssessmentRunner({
   const goNext = useCallback(
     async (text: string, auto: boolean) => {
       if (!stored || !current || submitting.current) return;
-      const trimmed = text.trim();
-      if (!trimmed && !auto) {
-        setBanner("Write something before submitting, or wait for the timer to auto-submit.");
-        return;
-      }
       submitting.current = true;
-      const nextAnswers = { ...stored.answers, [current.id]: trimmed };
+      setBanner(null);
+
+      let finalText = text.trim();
+      const blob = videoBlobRef.current;
+
+      if (blob && blob.size > 0) {
+        setTranscribing(true);
+        const fd = new FormData();
+        fd.append("file", blob, "answer.webm");
+        const r = await transcribeVideoAnswer(fd);
+        setTranscribing(false);
+
+        if ("error" in r) {
+          if (!auto) {
+            setBanner(r.error);
+            submitting.current = false;
+            return;
+          }
+          if (!finalText) finalText = "[No response — time expired]";
+        } else {
+          const trans = r.text;
+          finalText = finalText
+            ? `${finalText}\n\n[Video transcript]\n${trans}`
+            : `[Video transcript]\n${trans}`;
+        }
+      }
+
+      if (!finalText.trim()) {
+        if (!auto) {
+          setBanner("Record a video answer and/or type a response before submitting.");
+          submitting.current = false;
+          return;
+        }
+        finalText = "[No response — time expired]";
+      }
+
+      const nextAnswers = { ...stored.answers, [current.id]: finalText };
       const next: StoredAssessment = { ...stored, answers: nextAnswers };
       saveStored(next);
       setStored(next);
-      setBanner(null);
+      videoBlobRef.current = null;
 
       if (index >= questions.length - 1) {
         await finishAssessment(nextAnswers);
@@ -153,6 +188,10 @@ export function AssessmentRunner({
     return Math.round((index / questions.length) * 100);
   }, [index, questions.length]);
 
+  const onVideoBlob = useCallback((b: Blob | null) => {
+    videoBlobRef.current = b;
+  }, []);
+
   if (!hydrated || !stored) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-zinc-500">
@@ -175,7 +214,7 @@ export function AssessmentRunner({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400/90">
-            Timed assessment
+            Timed video interview
           </p>
           <h1 className="text-xl font-semibold text-white sm:text-2xl">{stored.job.title}</h1>
           <p className="text-sm text-zinc-500">
@@ -203,7 +242,7 @@ export function AssessmentRunner({
           <p className="text-xs text-zinc-500">
             {phase === "prep"
               ? "Read the prompt. Think before the answer window opens."
-              : "Answer window — reference your resume or repository when it strengthens your response."}
+              : "Record your video answer (and optionally add notes below). Answers are transcribed for rubric grading."}
           </p>
         </div>
 
@@ -218,29 +257,49 @@ export function AssessmentRunner({
                   <p className="font-mono text-4xl font-semibold tabular-nums text-cyan-300">
                     {prepLeft}s
                   </p>
-                  <p className="text-xs text-zinc-500">Prep period before you can type (HackerRank-style).</p>
+                  <p className="text-xs text-zinc-500">Prep before recording your video response.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-6">
                   <div className="flex items-center justify-between text-xs text-zinc-500">
-                    <span>Your answer</span>
+                    <span>Answer window</span>
                     <span className="font-mono tabular-nums text-cyan-300/90">{answerLeft}s left</span>
                   </div>
-                  <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    rows={10}
-                    className="w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm leading-relaxed text-zinc-100 outline-none ring-cyan-500/30 focus:ring-2"
-                    placeholder="Type your response…"
-                  />
-                  <div className="flex flex-wrap gap-3">
+
+                  {current ? (
+                    <VideoAnswerRecorder
+                      key={current.id}
+                      questionId={current.id}
+                      onBlobChange={onVideoBlob}
+                      disabled={false}
+                    />
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                      Optional written notes (appended to transcript)
+                    </label>
+                    <textarea
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      rows={5}
+                      className="w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm leading-relaxed text-zinc-100 outline-none ring-cyan-500/30 focus:ring-2"
+                      placeholder="Add bullet points or clarifications (optional)…"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
+                      disabled={transcribing}
                       onClick={() => void goNext(draft, false)}
-                      className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400"
+                      className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Submit answer
+                      {transcribing ? "Transcribing video…" : "Submit answer"}
                     </button>
+                    {transcribing ? (
+                      <span className="text-xs text-zinc-500">Sending audio to Whisper…</span>
+                    ) : null}
                   </div>
                 </div>
               )}
