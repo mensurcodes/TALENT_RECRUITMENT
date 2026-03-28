@@ -42,7 +42,11 @@ export default async function RecruiterLayout({ children }: { children: React.Re
                 </Link>
                 <LogoutButton />
               </>
-            ) : null}
+            ) : (
+              <Link href="/recruiter" className="text-sm text-slate-600 hover:text-slate-900">
+                Sign in
+              </Link>
+            )}
           </nav>
         </div>
       </header>

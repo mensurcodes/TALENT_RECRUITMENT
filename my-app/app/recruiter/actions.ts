@@ -34,6 +34,7 @@ export async function loginRecruiter(
   const store = await cookies();
   store.set(RECRUITER_SESSION_COOKIE, String((data as { id: number }).id), {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 14,
