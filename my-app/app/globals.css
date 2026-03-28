@@ -22,5 +22,89 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* —— Applicant hub: Framer / YC-style motion (white + blue only) —— */
+@keyframes applicant-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes applicant-breathe {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(12px, -18px) scale(1.03);
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .applicant-rise {
+    animation: applicant-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .applicant-page-enter {
+    animation: applicant-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .applicant-blob {
+    animation: applicant-breathe 22s ease-in-out infinite;
+  }
+
+  .applicant-blob-delay {
+    animation: applicant-breathe 26s ease-in-out infinite;
+    animation-delay: -8s;
+  }
+
+  .applicant-stagger > * {
+    animation: applicant-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .applicant-stagger > *:nth-child(1) {
+    animation-delay: 0.04s;
+  }
+  .applicant-stagger > *:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+  .applicant-stagger > *:nth-child(3) {
+    animation-delay: 0.12s;
+  }
+  .applicant-stagger > *:nth-child(4) {
+    animation-delay: 0.16s;
+  }
+  .applicant-stagger > *:nth-child(5) {
+    animation-delay: 0.2s;
+  }
+  .applicant-stagger > *:nth-child(6) {
+    animation-delay: 0.24s;
+  }
+  .applicant-stagger > *:nth-child(7) {
+    animation-delay: 0.28s;
+  }
+  .applicant-stagger > *:nth-child(8) {
+    animation-delay: 0.32s;
+  }
+  .applicant-stagger > *:nth-child(9) {
+    animation-delay: 0.36s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .applicant-rise,
+  .applicant-page-enter,
+  .applicant-stagger > *,
+  .applicant-blob,
+  .applicant-blob-delay {
+    animation: none !important;
+  }
 }

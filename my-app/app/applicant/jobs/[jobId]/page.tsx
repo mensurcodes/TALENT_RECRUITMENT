@@ -41,27 +41,31 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
   const alreadyApplied = existing !== null;
 
   return (
-    <article className="mx-auto max-w-4xl space-y-8">
+    <article className="mx-auto max-w-4xl space-y-10">
       <div>
-        <Link href="/applicant/jobs" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <Link
+          href="/applicant/jobs"
+          className="text-[13px] font-medium text-blue-600 transition-colors duration-200 hover:text-blue-700"
+        >
           ← Jobs
         </Link>
-        <div className="mt-4 flex flex-wrap items-start gap-4">
+        <div className="mt-5 flex flex-wrap items-start gap-4">
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-blue-100">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600/90">Role</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-800 ring-1 ring-blue-100/80">
                 {job.employment_type ?? "Role"}
               </span>
               {alreadyApplied && (
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
                   Applied
                 </span>
               )}
             </div>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-[2rem] sm:leading-tight">
               {job.title}
             </h1>
-            <p className="mt-2 text-slate-600">
+            <p className="mt-2 text-[15px] text-slate-600">
               {job.company_name}
               <span className="mx-2 text-slate-300">·</span>
               {job.recruiter_name}
@@ -71,9 +75,9 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
       </div>
 
       {alreadyApplied && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50/50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-white p-6 shadow-sm ring-1 ring-blue-500/5 transition-shadow duration-300 hover:shadow-md">
           <div>
-            <p className="font-medium text-slate-900">You have already applied.</p>
+            <p className="font-semibold text-slate-900">You&apos;ve already applied.</p>
             {existing.submitted_at && (
               <p className="mt-1 text-sm text-slate-600">
                 Submitted{" "}
@@ -93,14 +97,14 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
           </div>
           <Link
             href={`/applicant/jobs/${job.id}/results`}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
           >
             View results
           </Link>
         </div>
       )}
 
-      <section className="grid gap-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-3 lg:p-8">
+      <section className="grid gap-8 rounded-3xl border border-slate-200/90 bg-white/90 p-6 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.12)] ring-1 ring-slate-900/[0.04] backdrop-blur-sm lg:grid-cols-3 lg:p-10">
         <div className="space-y-3 lg:col-span-2">
           <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500">Description</h2>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
@@ -130,13 +134,13 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
           <>
             <Link
               href={`/applicant/jobs/${job.id}/results`}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-xl"
             >
               View results
             </Link>
             <Link
               href="/applicant/jobs"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
             >
               Back to jobs
             </Link>
@@ -144,7 +148,7 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
         ) : (
           <Link
             href={`/applicant/jobs/${job.id}/apply`}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
           >
             Apply & start assessment
           </Link>

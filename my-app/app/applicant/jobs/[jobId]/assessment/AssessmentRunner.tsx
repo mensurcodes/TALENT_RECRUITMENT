@@ -211,19 +211,21 @@ export function AssessmentRunner({
   }
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <div className="w-full space-y-8">
+      <div className="flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.04] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-blue-600">Assessment</p>
-          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{stored.job.title}</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600/90">Live assessment</p>
+          <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            {stored.job.title}
+          </h1>
           <p className="mt-1 text-sm text-slate-600">
             {stored.job.company_name} · Question {index + 1} of {questions.length}
           </p>
         </div>
-        <div className="w-full max-w-xs sm:w-48">
+        <div className="w-full max-w-xs sm:w-52">
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-blue-600 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-[width] duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -231,14 +233,14 @@ export function AssessmentRunner({
       </div>
 
       {banner ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50/90 to-amber-50/40 px-5 py-3.5 text-[13px] leading-relaxed text-amber-950 ring-1 ring-amber-500/10">
           {banner}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
-          <p className="text-sm text-slate-700">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_24px_70px_-32px_rgba(37,99,235,0.18)] ring-1 ring-slate-900/[0.04]">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50/90 to-blue-50/30 px-6 py-4">
+          <p className="text-[13px] leading-relaxed text-slate-700">
             {phase === "prep"
               ? "Review the question. Preparation time before you answer."
               : "Record your response. You may add written notes. Video is transcribed for grading."}
@@ -251,16 +253,20 @@ export function AssessmentRunner({
               <p className="text-base leading-relaxed text-slate-900 sm:text-lg">{current.prompt}</p>
 
               {phase === "prep" ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-blue-100 bg-blue-50/50 py-12">
-                  <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Preparation</p>
-                  <p className="font-mono text-4xl font-semibold tabular-nums text-blue-900">{prepLeft}s</p>
-                  <p className="text-xs text-slate-600">Time to plan your answer.</p>
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-blue-100/90 bg-gradient-to-b from-blue-50/80 to-white py-14 ring-1 ring-blue-500/5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-600/90">Prepare</p>
+                  <p className="font-mono text-5xl font-semibold tabular-nums tracking-tight text-blue-700 transition-all duration-300">
+                    {prepLeft}s
+                  </p>
+                  <p className="text-[13px] text-slate-500">Plan your answer before recording.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
                     <span>Time remaining</span>
-                    <span className="font-mono tabular-nums text-blue-700">{answerLeft}s</span>
+                    <span className="font-mono text-[13px] font-semibold normal-case tracking-normal tabular-nums text-blue-600">
+                      {answerLeft}s
+                    </span>
                   </div>
 
                   {current ? (
@@ -278,7 +284,7 @@ export function AssessmentRunner({
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       rows={5}
-                      className="w-full resize-y rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-shadow duration-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/15"
                       placeholder="Additional context…"
                     />
                   </div>
@@ -288,7 +294,7 @@ export function AssessmentRunner({
                       type="button"
                       disabled={transcribing}
                       onClick={() => void goNext(draft, false)}
-                      className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                      className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg disabled:opacity-60"
                     >
                       {transcribing ? "Transcribing…" : "Submit answer"}
                     </button>

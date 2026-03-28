@@ -72,24 +72,30 @@ export function ApplyLauncher({ job, applicant }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <p className="rounded-lg border border-blue-100 bg-blue-50/80 p-4 text-sm text-slate-700">
-        <span className="font-semibold text-slate-900">GitHub:</span> for public repositories we analyze
-        the default branch tree, README, languages, and sample source files via the GitHub API. Add{" "}
-        <code className="rounded bg-white px-1 font-mono text-xs text-slate-800">GITHUB_TOKEN</code> to{" "}
-        <code className="rounded bg-white px-1 font-mono text-xs">.env.local</code> for higher rate limits.
+    <form onSubmit={onSubmit} className="space-y-7">
+      <p className="rounded-2xl border border-blue-100/90 bg-gradient-to-br from-blue-50/90 to-white p-5 text-[13px] leading-relaxed text-slate-600 ring-1 ring-blue-500/5">
+        <span className="font-semibold text-slate-900">GitHub</span> — for public repos we read the default
+        branch tree, README, languages, and sample files. Add{" "}
+        <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800 shadow-sm">
+          GITHUB_TOKEN
+        </code>{" "}
+        in{" "}
+        <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] shadow-sm">.env.local</code> for
+        higher API limits.
       </p>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-xl border border-red-200/90 bg-red-50 px-4 py-3 text-sm text-red-800 transition-all duration-200">
           {error}
         </div>
       )}
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700">Resume (PDF)</label>
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center transition hover:border-blue-300 hover:bg-blue-50/30">
-          <span className="text-2xl text-slate-400">↑</span>
+        <label className="block text-[13px] font-medium text-slate-700">Resume (PDF)</label>
+        <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 px-6 py-12 text-center transition-all duration-300 hover:border-blue-400/60 hover:bg-blue-50/40 hover:shadow-[0_0_0_4px_rgba(59,130,246,0.08)]">
+          <span className="text-2xl text-slate-400 transition-transform duration-300 group-hover:-translate-y-0.5">
+            ↑
+          </span>
           {fileName ? (
             <span className="text-sm font-medium text-slate-900">{fileName}</span>
           ) : (
@@ -125,7 +131,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
           value={resumeUrl}
           onChange={(e) => setResumeUrl(e.target.value)}
           placeholder="https://…"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition-shadow duration-200 focus:border-blue-500/80 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
         />
       </div>
 
@@ -139,14 +145,14 @@ export function ApplyLauncher({ job, applicant }: Props) {
           value={githubUrl}
           onChange={(e) => setGithubUrl(e.target.value)}
           placeholder="https://github.com/org/repo"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition-shadow duration-200 focus:border-blue-500/80 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
         />
       </div>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 sm:w-auto sm:px-10"
+        className="w-full rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl active:scale-[0.99] disabled:opacity-50 sm:w-auto sm:px-12"
       >
         {pending ? "Preparing assessment…" : "Continue to assessment"}
       </button>

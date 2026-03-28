@@ -157,15 +157,21 @@ export function ResultsClient({
   const ev = display.evaluation;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-10">
       <div>
-        <Link href="/applicant/jobs" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <Link
+          href="/applicant/jobs"
+          className="text-[13px] font-medium text-blue-600 transition-colors duration-200 hover:text-blue-700"
+        >
           ← All applications
         </Link>
-        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Assessment results</h1>
-            <p className="mt-2 text-slate-600">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600/90">Results</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-4xl">
+              Assessment
+            </h1>
+            <p className="mt-2 text-[15px] text-slate-600">
               {display.jobTitle}
               <span className="mx-2 text-slate-300">·</span>
               {display.companyName}
@@ -181,7 +187,7 @@ export function ResultsClient({
               </p>
             )}
           </div>
-          <span className="rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 ring-1 ring-blue-100">
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-800 ring-1 ring-blue-100/80">
             Submitted
           </span>
         </div>
@@ -189,8 +195,8 @@ export function ResultsClient({
 
       {ev ? (
         <>
-          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-6 border-b border-slate-100 bg-slate-50/80 p-6 sm:flex-row sm:items-center sm:p-8">
+          <section className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_20px_60px_-28px_rgba(37,99,235,0.15)] ring-1 ring-slate-900/[0.04]">
+            <div className="flex flex-col gap-6 border-b border-slate-100 bg-gradient-to-br from-blue-50/50 to-white p-6 sm:flex-row sm:items-center sm:p-10">
               <div className="flex flex-col items-center gap-2">
                 <ScoreRing score={ev.overallScore} max={ev.maxScore} />
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Score</p>
@@ -216,7 +222,7 @@ export function ResultsClient({
           </section>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.03] transition-shadow duration-300 hover:shadow-md">
               <h3 className="text-xs font-medium uppercase tracking-wide text-blue-700">Strengths</h3>
               {ev.strengths.length > 0 ? (
                 <ul className="mt-3 space-y-2">
@@ -231,7 +237,7 @@ export function ResultsClient({
                 <p className="mt-3 text-sm text-slate-500">—</p>
               )}
             </section>
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.03] transition-shadow duration-300 hover:shadow-md">
               <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600">Areas to improve</h3>
               {ev.improvements.length > 0 ? (
                 <ul className="mt-3 space-y-2">
@@ -249,7 +255,7 @@ export function ResultsClient({
           </div>
 
           {ev.rubricBreakdown.length > 0 && (
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.03]">
               <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Rubric breakdown</h3>
               <ul className="mt-4 divide-y divide-slate-100">
                 {ev.rubricBreakdown.map((row, i) => {
@@ -285,13 +291,13 @@ export function ResultsClient({
       <div className="flex flex-wrap gap-3">
         <Link
           href={`/applicant/jobs/${jobId}`}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
         >
           Job details
         </Link>
         <Link
           href="/applicant/jobs"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
         >
           Back to jobs
         </Link>

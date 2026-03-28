@@ -117,10 +117,11 @@ export function VideoAnswerRecorder({
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+    <div className="space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-b from-slate-50/80 to-white p-5 ring-1 ring-slate-900/[0.03]">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">Video response</h3>
-        <p className="text-xs text-slate-600">Camera and microphone required. Transcribed for grading.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-600/90">Capture</p>
+        <h3 className="mt-1 text-sm font-semibold tracking-tight text-slate-900">Video response</h3>
+        <p className="mt-1 text-[13px] text-slate-600">Camera and microphone required. Transcribed for grading.</p>
       </div>
 
       {error ? (
@@ -130,7 +131,7 @@ export function VideoAnswerRecorder({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Preview</p>
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200">
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900 shadow-inner ring-1 ring-slate-900/20">
             <video
               ref={liveRef}
               className="h-full w-full object-cover"
@@ -139,15 +140,16 @@ export function VideoAnswerRecorder({
               autoPlay
             />
             {status === "recording" ? (
-              <span className="absolute left-2 top-2 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                REC
+              <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
+                Rec
               </span>
             ) : null}
           </div>
         </div>
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Playback</p>
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200">
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900 shadow-inner ring-1 ring-slate-900/20">
             <video ref={playbackRef} className="h-full w-full object-cover" playsInline controls />
           </div>
         </div>
@@ -163,7 +165,7 @@ export function VideoAnswerRecorder({
               if (status === "recorded") resetRecording();
               void startRecording();
             }}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
           >
             {status === "recorded" ? "Record again" : "Start recording"}
           </button>
@@ -172,7 +174,7 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={stopRecording}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            className="rounded-xl bg-gradient-to-b from-red-500 to-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-500/20 transition-all duration-200 hover:shadow-lg"
           >
             Stop
           </button>
@@ -181,7 +183,7 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={resetRecording}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
           >
             Discard
           </button>

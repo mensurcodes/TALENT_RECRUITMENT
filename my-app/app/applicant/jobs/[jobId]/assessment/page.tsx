@@ -16,10 +16,10 @@ export default async function AssessmentPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-8">
       <Link
         href={`/applicant/jobs/${jobId}/apply`}
-        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        className="text-[13px] font-medium text-blue-600 transition-colors duration-200 hover:text-blue-700"
       >
         ← Application
       </Link>
