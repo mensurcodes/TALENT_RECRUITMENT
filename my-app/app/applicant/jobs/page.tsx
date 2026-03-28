@@ -12,12 +12,12 @@ function ScorePill({ score, max }: { score: number | null; max: number | null })
   const pct = (max ?? 100) > 0 ? score / (max ?? 100) : 0;
   const cls =
     pct >= 0.75
-      ? "bg-emerald-600 text-white"
+      ? "bg-blue-600 text-white"
       : pct >= 0.5
-        ? "bg-yellow-400 text-emerald-950"
-        : "bg-orange-500 text-white";
+        ? "bg-blue-100 text-blue-900 ring-1 ring-blue-200"
+        : "bg-slate-200 text-slate-800";
   return (
-    <span className={`rounded-full px-3 py-0.5 text-xs font-black shadow ${cls}`}>
+    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${cls}`}>
       {score}/{max ?? 100}
     </span>
   );
@@ -29,21 +29,21 @@ function ApplicationCard({ interview }: { interview: InterviewRow }) {
   const date = interview.submitted_at ?? interview.created_at;
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border-2 border-emerald-200 bg-white p-5 shadow-md sm:flex-row sm:items-center sm:justify-between">
+    <article className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-lime-300 px-3 py-0.5 text-xs font-black text-emerald-950">
+          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
             Submitted
           </span>
           <ScorePill score={interview.score} max={interview.max_score} />
         </div>
-        <p className="mt-2 text-lg font-bold text-emerald-950">{title}</p>
-        <p className="mt-0.5 text-sm font-semibold text-emerald-800">
+        <p className="mt-2 font-semibold text-slate-900">{title}</p>
+        <p className="mt-0.5 text-sm text-slate-600">
           {company}
           {date && (
             <>
-              <span className="mx-2 text-emerald-300">·</span>
-              <span className="font-medium text-emerald-600">
+              <span className="mx-2 text-slate-300">·</span>
+              <span className="text-slate-500">
                 {new Date(date).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -54,19 +54,19 @@ function ApplicationCard({ interview }: { interview: InterviewRow }) {
           )}
         </p>
         {interview.summary && (
-          <p className="mt-2 line-clamp-2 text-sm text-emerald-800/80">{interview.summary}</p>
+          <p className="mt-1.5 line-clamp-2 text-sm text-slate-600">{interview.summary}</p>
         )}
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         <Link
           href={`/applicant/jobs/${interview.job_id}/results`}
-          className="rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 px-4 py-2 text-xs font-bold text-white shadow-md"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
         >
           View results
         </Link>
         <Link
           href={`/applicant/jobs/${interview.job_id}`}
-          className="rounded-xl border-2 border-emerald-200 bg-white px-4 py-2 text-xs font-bold text-emerald-800"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
         >
           Job details
         </Link>
@@ -82,7 +82,7 @@ export default async function ApplicantJobsPage() {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/applicant" className="text-sm font-bold text-emerald-800 underline">
+        <Link href="/applicant" className="text-sm font-medium text-blue-600 hover:text-blue-700">
           ← Back
         </Link>
       </div>
@@ -96,9 +96,9 @@ export default async function ApplicantJobsPage() {
 
   if (!applicant) {
     return (
-      <p className="text-sm font-medium text-emerald-800">
+      <p className="text-sm text-slate-600">
         Session invalid.{" "}
-        <Link href="/applicant" className="font-bold text-lime-700 underline">
+        <Link href="/applicant" className="font-medium text-blue-600 hover:text-blue-700">
           Sign in again
         </Link>
         .
@@ -114,27 +114,27 @@ export default async function ApplicantJobsPage() {
   const appliedJobs = jobs.filter((j) => appliedJobIds.has(j.id));
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-12">
-      <div className="rounded-3xl border-2 border-white bg-white/80 p-6 shadow-xl backdrop-blur-sm sm:p-8">
+    <div className="space-y-10">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-lime-700">Your dashboard</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-emerald-950 sm:text-4xl">
-              Matched opportunities
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-600">Dashboard</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+              Your opportunities
             </h1>
-            <p className="mt-2 text-base font-medium text-emerald-800">
-              <span className="font-bold text-emerald-950">{applicant.name}</span>
-              <span className="mx-2 text-emerald-300">·</span>
+            <p className="mt-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-900">{applicant.name}</span>
+              <span className="mx-2 text-slate-300">·</span>
               {applicant.email}
-              <span className="mx-2 text-emerald-300">·</span>
+              <span className="mx-2 text-slate-300">·</span>
               {pref === "unknown" ? "Any employment type" : pref.replaceAll("_", "-")}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <span className="rounded-2xl bg-gradient-to-r from-yellow-300 to-lime-300 px-4 py-2 text-sm font-black text-emerald-950 shadow">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-800 ring-1 ring-blue-100">
               {interviews.length} application{interviews.length !== 1 ? "s" : ""}
             </span>
-            <span className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-900">
+            <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
               {openJobs.length} open role{openJobs.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -142,11 +142,8 @@ export default async function ApplicantJobsPage() {
       </div>
 
       {interviews.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="flex items-center gap-3 text-lg font-black text-emerald-950">
-            <span className="h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-lime-200" />
-            My applications
-          </h2>
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900">My applications</h2>
           <ul className="space-y-3">
             {interviews.map((interview) => (
               <li key={interview.id}>
@@ -157,30 +154,26 @@ export default async function ApplicantJobsPage() {
         </section>
       )}
 
-      <section className="space-y-4">
-        <h2 className="flex flex-wrap items-center gap-3 text-lg font-black text-emerald-950">
-          <span className="h-3 w-3 rounded-full bg-yellow-400 ring-4 ring-yellow-100" />
-          Open roles for you
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-900">Open roles</h2>
           {appliedJobs.length > 0 && (
-            <span className="ml-auto text-sm font-bold text-emerald-600">
-              {appliedJobs.length} already applied
-            </span>
+            <span className="text-xs text-slate-500">({appliedJobs.length} already applied)</span>
           )}
-        </h2>
+        </div>
 
         {openJobs.length === 0 && jobs.length === 0 ? (
-          <div className="rounded-3xl border-2 border-dashed border-emerald-300 bg-white/60 p-12 text-center text-emerald-800">
-            No roles match your profile yet. Ask your recruiter to publish jobs or update your
-            employment type.
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-600">
+            No roles match your profile. Update your employment type or ask a recruiter to add jobs.
           </div>
         ) : openJobs.length === 0 ? (
-          <div className="rounded-3xl border-2 border-lime-300 bg-lime-50 p-12 text-center font-bold text-emerald-900">
-            You&apos;ve applied to every matched role. Great work!
+          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-600">
+            You&apos;ve applied to all matched roles.
           </div>
         ) : (
-          <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {openJobs.map((job) => (
-              <li key={job.id} className="min-h-[280px]">
+              <li key={job.id} className="min-h-[260px]">
                 <JobCard job={job} />
               </li>
             ))}
@@ -188,15 +181,15 @@ export default async function ApplicantJobsPage() {
         )}
 
         {appliedJobs.length > 0 && (
-          <details className="group mt-4">
-            <summary className="cursor-pointer text-sm font-bold text-emerald-700 hover:text-emerald-900">
-              Show roles you already applied to ({appliedJobs.length}) ▾
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+              Previously applied ({appliedJobs.length})
             </summary>
-            <ul className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <ul className="mt-4 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {appliedJobs.map((job) => {
                 const match = interviews.find((i) => i.job_id === job.id);
                 return (
-                  <li key={job.id} className="min-h-[280px]">
+                  <li key={job.id} className="min-h-[260px]">
                     <JobCard job={job} appliedInterviewId={match?.id} />
                   </li>
                 );

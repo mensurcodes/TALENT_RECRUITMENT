@@ -1,13 +1,12 @@
 export function SupabaseNotice() {
   return (
-    <div className="max-w-lg rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-yellow-100 to-amber-100 p-5 text-sm text-amber-950 shadow-lg ring-4 ring-yellow-200/50">
-      <p className="text-base font-bold text-amber-900">Supabase not configured</p>
+    <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+      <p className="font-semibold text-amber-900">Configuration needed</p>
       <p className="mt-2 leading-relaxed text-amber-900/90">
-        Add <code className="rounded bg-white/80 px-1.5 py-0.5 font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
-        and{" "}
-        <code className="rounded bg-white/80 px-1.5 py-0.5 font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
-        to <code className="rounded bg-white/80 px-1.5 py-0.5 font-mono text-xs">my-app/.env.local</code>, then
-        restart the dev server.
+        Add <code className="rounded bg-white px-1 font-mono text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+        <code className="rounded bg-white px-1 font-mono text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to{" "}
+        <code className="rounded bg-white px-1 font-mono text-xs">my-app/.env.local</code>, then restart the dev
+        server.
       </p>
     </div>
   );

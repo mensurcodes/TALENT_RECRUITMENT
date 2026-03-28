@@ -21,7 +21,7 @@ export default async function ApplyPage({ params }: Props) {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/applicant" className="text-sm font-bold text-emerald-800 underline">
+        <Link href="/applicant" className="text-sm font-medium text-blue-600 hover:text-blue-700">
           ← Back
         </Link>
       </div>
@@ -44,42 +44,39 @@ export default async function ApplyPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <Link
           href={`/applicant/jobs/${job.id}`}
-          className="text-sm font-bold text-emerald-700 hover:text-emerald-950"
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           ← {job.title}
         </Link>
-        <h1 className="mt-4 text-3xl font-black text-emerald-950 sm:text-4xl">Submit application</h1>
-        <p className="mt-2 text-lg font-semibold text-emerald-800">
+        <h1 className="mt-4 text-2xl font-semibold text-slate-900 sm:text-3xl">Apply</h1>
+        <p className="mt-2 text-slate-600">
           {job.company_name}
-          <span className="mx-2 text-emerald-300">·</span>
+          <span className="mx-2 text-slate-300">·</span>
           {job.employment_type ?? "Role"}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { n: "1", t: "Resume + GitHub", d: "We read your PDF or link + public repo files." },
-          { n: "2", t: "AI questions", d: "Tailored prompts from your real codebase context." },
-          { n: "3", t: "Assessment", d: "Timed answers — video + optional notes." },
+          { n: "1", t: "Resume & GitHub", d: "PDF or link plus public repository context." },
+          { n: "2", t: "Questions", d: "Role-specific prompts from your materials." },
+          { n: "3", t: "Assessment", d: "Timed responses with optional video." },
         ].map((s) => (
-          <div
-            key={s.n}
-            className="rounded-2xl border-2 border-lime-200 bg-white p-4 shadow-md"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-300 text-sm font-black text-emerald-950">
+          <div key={s.n} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
               {s.n}
             </span>
-            <p className="mt-2 font-bold text-emerald-950">{s.t}</p>
-            <p className="mt-1 text-xs font-medium text-emerald-800">{s.d}</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{s.t}</p>
+            <p className="mt-1 text-xs text-slate-600">{s.d}</p>
           </div>
         ))}
       </div>
 
-      <section className="rounded-3xl border-2 border-white bg-white p-6 shadow-xl sm:p-8">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <ApplyLauncher job={job} applicant={applicant} />
       </section>
     </div>

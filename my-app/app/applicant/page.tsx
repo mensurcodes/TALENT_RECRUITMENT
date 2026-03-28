@@ -11,20 +11,16 @@ export default async function ApplicantHomePage() {
   const ok = hasSupabaseConfig();
 
   return (
-    <div className="flex min-h-[calc(100dvh-8rem)] w-full flex-col items-center justify-center gap-10">
-      <div className="w-full max-w-xl text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-yellow-400 via-lime-400 to-emerald-500 text-3xl font-black text-white shadow-xl ring-4 ring-white">
+    <div className="flex min-h-[calc(100dvh-7rem)] w-full flex-col items-center justify-center gap-10">
+      <div className="w-full max-w-lg text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-sm">
           T
         </div>
-        <h1 className="mt-6 text-3xl font-black tracking-tight text-emerald-950 sm:text-4xl">
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
           Talent Recruitment
         </h1>
-        <p className="mt-3 text-lg font-medium text-emerald-800">
-          AI-matched roles · video assessments · instant scoring
-        </p>
-        <p className="mt-2 text-sm text-emerald-700/80">
-          Sign in to explore open positions and complete your application in one flow.
-        </p>
+        <p className="mt-3 text-base text-slate-600">Matched roles, assessments, and scoring in one place.</p>
+        <p className="mt-2 text-sm text-slate-500">Sign in with your applicant credentials to continue.</p>
       </div>
 
       {!ok ? <SupabaseNotice /> : <LoginForm />}

@@ -16,24 +16,23 @@ type DisplayResult = {
   githubUrl: string;
 };
 
-function scoreColor(score: number, max: number) {
+function scoreTone(score: number, max: number) {
   const pct = max > 0 ? score / max : 0;
-  if (pct >= 0.75) return "text-emerald-700";
-  if (pct >= 0.5) return "text-amber-700";
-  return "text-orange-700";
+  if (pct >= 0.75) return "text-blue-800";
+  if (pct >= 0.5) return "text-slate-800";
+  return "text-slate-600";
 }
 
 function ScoreRing({ score, max }: { score: number; max: number }) {
   const pct = max > 0 ? score / max : 0;
-  const color =
-    pct >= 0.75 ? "stroke-emerald-600" : pct >= 0.5 ? "stroke-yellow-500" : "stroke-orange-500";
+  const stroke = pct >= 0.75 ? "stroke-blue-600" : pct >= 0.5 ? "stroke-slate-500" : "stroke-slate-400";
   const r = 42;
   const circ = 2 * Math.PI * r;
   const dash = circ * pct;
   return (
     <div className="relative flex items-center justify-center">
-      <svg width={104} height={104} className="-rotate-90 drop-shadow-sm">
-        <circle cx={52} cy={52} r={r} fill="none" stroke="#d1fae5" strokeWidth={8} />
+      <svg width={104} height={104} className="-rotate-90">
+        <circle cx={52} cy={52} r={r} fill="none" stroke="#e2e8f0" strokeWidth={8} />
         <circle
           cx={52}
           cy={52}
@@ -42,14 +41,14 @@ function ScoreRing({ score, max }: { score: number; max: number }) {
           strokeWidth={8}
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circ}`}
-          className={color}
+          className={stroke}
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`font-mono text-2xl font-black tabular-nums ${scoreColor(score, max)}`}>
+        <span className={`font-mono text-2xl font-semibold tabular-nums ${scoreTone(score, max)}`}>
           {score}
         </span>
-        <span className="text-xs font-bold text-emerald-600">/ {max}</span>
+        <span className="text-xs text-slate-500">/ {max}</span>
       </div>
     </div>
   );
@@ -137,23 +136,18 @@ export function ResultsClient({
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime-200 border-t-emerald-600" />
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
       </div>
     );
   }
 
   if (!display) {
     return (
-      <div className="mx-auto max-w-lg rounded-3xl border-2 border-emerald-200 bg-white p-10 text-center shadow-xl">
-        <p className="font-bold text-emerald-950">No results for this job yet.</p>
-        <p className="mt-2 text-sm font-medium text-emerald-800">
-          Finish an assessment or sign in with the account that applied.
-        </p>
-        <Link
-          href={`/applicant/jobs/${jobId}`}
-          className="mt-6 inline-block font-black text-lime-700 underline"
-        >
+      <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <p className="font-medium text-slate-900">No results for this job.</p>
+        <p className="mt-2 text-sm text-slate-600">Complete an assessment or use the account that applied.</p>
+        <Link href={`/applicant/jobs/${jobId}`} className="mt-6 inline-block text-sm font-medium text-blue-600 hover:text-blue-700">
           ← Back to job
         </Link>
       </div>
@@ -163,21 +157,21 @@ export function ResultsClient({
   const ev = display.evaluation;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <Link href="/applicant/jobs" className="text-sm font-bold text-emerald-700 hover:text-emerald-950">
+        <Link href="/applicant/jobs" className="text-sm font-medium text-blue-600 hover:text-blue-700">
           ← All applications
         </Link>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-emerald-950 sm:text-4xl">Your results</h1>
-            <p className="mt-2 text-lg font-semibold text-emerald-800">
+            <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Assessment results</h1>
+            <p className="mt-2 text-slate-600">
               {display.jobTitle}
-              <span className="mx-2 text-emerald-300">·</span>
+              <span className="mx-2 text-slate-300">·</span>
               {display.companyName}
             </p>
             {display.submittedAt && (
-              <p className="mt-1 text-sm font-medium text-emerald-600">
+              <p className="mt-1 text-sm text-slate-500">
                 Submitted{" "}
                 {new Date(display.submittedAt).toLocaleDateString("en-US", {
                   month: "short",
@@ -187,7 +181,7 @@ export function ResultsClient({
               </p>
             )}
           </div>
-          <span className="rounded-full bg-lime-300 px-4 py-1.5 text-xs font-black text-emerald-950 shadow">
+          <span className="rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 ring-1 ring-blue-100">
             Submitted
           </span>
         </div>
@@ -195,29 +189,25 @@ export function ResultsClient({
 
       {ev ? (
         <>
-          <section className="overflow-hidden rounded-3xl border-2 border-white bg-white shadow-xl">
-            <div className="flex flex-col gap-6 bg-gradient-to-r from-yellow-50 via-lime-50 to-emerald-50 p-6 sm:flex-row sm:items-center sm:p-8">
-              <div className="flex shrink-0 flex-col items-center gap-2">
+          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-6 border-b border-slate-100 bg-slate-50/80 p-6 sm:flex-row sm:items-center sm:p-8">
+              <div className="flex flex-col items-center gap-2">
                 <ScoreRing score={ev.overallScore} max={ev.maxScore} />
-                <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Score</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Score</p>
               </div>
               <div className="flex-1">
-                <h2 className="text-xs font-black uppercase tracking-widest text-lime-800">Summary</h2>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-950">{ev.summary}</p>
-                <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-emerald-800">
-                  {display.resumeLabel && (
-                    <span>
-                      📎 {display.resumeLabel.startsWith("PDF:") ? display.resumeLabel : display.resumeLabel}
-                    </span>
-                  )}
+                <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500">Summary</h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-800">{ev.summary}</p>
+                <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-600">
+                  {display.resumeLabel && <span>{display.resumeLabel}</span>}
                   {display.githubUrl && (
                     <a
                       href={display.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-bold text-emerald-700 underline"
+                      className="font-medium text-blue-600 hover:text-blue-700"
                     >
-                      GitHub →
+                      GitHub repository
                     </a>
                   )}
                 </div>
@@ -226,59 +216,59 @@ export function ResultsClient({
           </section>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <section className="rounded-3xl border-2 border-emerald-200 bg-white p-6 shadow-md">
-              <h3 className="text-xs font-black uppercase tracking-widest text-emerald-700">Strengths</h3>
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-blue-700">Strengths</h3>
               {ev.strengths.length > 0 ? (
                 <ul className="mt-3 space-y-2">
                   {ev.strengths.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm font-medium text-emerald-900">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-lime-500" />
+                    <li key={i} className="flex gap-2 text-sm text-slate-700">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
                       {s}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-emerald-700">—</p>
+                <p className="mt-3 text-sm text-slate-500">—</p>
               )}
             </section>
-            <section className="rounded-3xl border-2 border-amber-200 bg-amber-50/80 p-6 shadow-md">
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-800">Grow next</h3>
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600">Areas to improve</h3>
               {ev.improvements.length > 0 ? (
                 <ul className="mt-3 space-y-2">
                   {ev.improvements.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm font-medium text-amber-950">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                    <li key={i} className="flex gap-2 text-sm text-slate-700">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
                       {s}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm text-amber-900">—</p>
+                <p className="mt-3 text-sm text-slate-500">—</p>
               )}
             </section>
           </div>
 
           {ev.rubricBreakdown.length > 0 && (
-            <section className="rounded-3xl border-2 border-emerald-200 bg-white p-6 shadow-md">
-              <h3 className="text-xs font-black uppercase tracking-widest text-emerald-700">Rubric</h3>
-              <ul className="mt-4 divide-y divide-emerald-100">
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Rubric breakdown</h3>
+              <ul className="mt-4 divide-y divide-slate-100">
                 {ev.rubricBreakdown.map((row, i) => {
                   const pct = row.max > 0 ? row.score / row.max : 0;
                   return (
                     <li key={i} className="py-3 first:pt-0 last:pb-0">
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="font-bold text-emerald-950">{row.criterion}</span>
-                        <span className={`font-mono text-sm font-black ${scoreColor(row.score, row.max)}`}>
+                        <span className="text-sm font-medium text-slate-900">{row.criterion}</span>
+                        <span className={`font-mono text-sm font-semibold ${scoreTone(row.score, row.max)}`}>
                           {row.score}/{row.max}
                         </span>
                       </div>
-                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-emerald-100">
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                         <div
-                          className={`h-full rounded-full ${pct >= 0.75 ? "bg-emerald-600" : pct >= 0.5 ? "bg-yellow-400" : "bg-orange-500"}`}
+                          className={`h-full rounded-full ${pct >= 0.75 ? "bg-blue-600" : pct >= 0.5 ? "bg-slate-500" : "bg-slate-400"}`}
                           style={{ width: `${pct * 100}%` }}
                         />
                       </div>
-                      {row.note && <p className="mt-1 text-xs font-medium text-emerald-700">{row.note}</p>}
+                      {row.note && <p className="mt-1 text-xs text-slate-600">{row.note}</p>}
                     </li>
                   );
                 })}
@@ -287,7 +277,7 @@ export function ResultsClient({
           )}
         </>
       ) : (
-        <div className="rounded-3xl border-2 border-emerald-200 bg-white p-8 text-center font-medium text-emerald-800">
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">
           Evaluation not available.
         </div>
       )}
@@ -295,15 +285,15 @@ export function ResultsClient({
       <div className="flex flex-wrap gap-3">
         <Link
           href={`/applicant/jobs/${jobId}`}
-          className="rounded-xl border-2 border-emerald-200 bg-white px-5 py-2.5 text-sm font-bold text-emerald-900"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           Job details
         </Link>
         <Link
           href="/applicant/jobs"
-          className="rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 px-5 py-2.5 text-sm font-black text-white shadow-lg"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
-          Job board →
+          Back to jobs
         </Link>
       </div>
     </div>

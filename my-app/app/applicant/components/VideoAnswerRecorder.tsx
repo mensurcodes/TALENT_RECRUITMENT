@@ -117,24 +117,20 @@ export function VideoAnswerRecorder({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border-2 border-emerald-200 bg-gradient-to-b from-white to-lime-50/50 p-5 shadow-inner">
+    <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
       <div>
-        <h3 className="text-sm font-black text-emerald-950">Video answer</h3>
-        <p className="text-xs font-medium text-emerald-800">
-          Allow camera + mic. Your clip is sent to Whisper for transcription.
-        </p>
+        <h3 className="text-sm font-semibold text-slate-900">Video response</h3>
+        <p className="text-xs text-slate-600">Camera and microphone required. Transcribed for grading.</p>
       </div>
 
       {error ? (
-        <p className="rounded-xl border-2 border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-900">
-          {error}
-        </p>
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
-          <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Live</p>
-          <div className="relative aspect-video overflow-hidden rounded-xl bg-emerald-950 ring-2 ring-lime-300">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Preview</p>
+          <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200">
             <video
               ref={liveRef}
               className="h-full w-full object-cover"
@@ -143,23 +139,21 @@ export function VideoAnswerRecorder({
               autoPlay
             />
             {status === "recording" ? (
-              <span className="absolute left-2 top-2 rounded-md bg-red-600 px-2 py-0.5 text-xs font-black text-white">
+              <span className="absolute left-2 top-2 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
                 REC
               </span>
             ) : null}
           </div>
         </div>
         <div className="space-y-2">
-          <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Playback</p>
-          <div className="relative aspect-video overflow-hidden rounded-xl bg-emerald-950 ring-2 ring-emerald-200">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Playback</p>
+          <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900 ring-1 ring-slate-200">
             <video ref={playbackRef} className="h-full w-full object-cover" playsInline controls />
           </div>
         </div>
       </div>
 
-      {status === "requesting" ? (
-        <p className="text-sm font-bold text-lime-700">Starting camera…</p>
-      ) : null}
+      {status === "requesting" ? <p className="text-sm text-slate-600">Starting camera…</p> : null}
 
       <div className="flex flex-wrap gap-2">
         {status !== "recording" && status !== "requesting" ? (
@@ -169,7 +163,7 @@ export function VideoAnswerRecorder({
               if (status === "recorded") resetRecording();
               void startRecording();
             }}
-            className="rounded-xl bg-gradient-to-r from-yellow-400 to-lime-500 px-5 py-2.5 text-sm font-black text-emerald-950 shadow-md"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             {status === "recorded" ? "Record again" : "Start recording"}
           </button>
@@ -178,7 +172,7 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={stopRecording}
-            className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white shadow-md"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
           >
             Stop
           </button>
@@ -187,7 +181,7 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={resetRecording}
-            className="rounded-xl border-2 border-emerald-200 bg-white px-5 py-2.5 text-sm font-bold text-emerald-900"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             Discard
           </button>

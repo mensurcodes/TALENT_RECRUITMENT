@@ -19,50 +19,48 @@ export function JobCard({ job, appliedInterviewId }: Props) {
 
   return (
     <article
-      className={`group flex h-full flex-col rounded-3xl border-2 bg-white p-6 shadow-lg transition ${
-        applied
-          ? "border-emerald-200 opacity-95"
-          : "border-lime-200 hover:border-lime-400 hover:shadow-xl"
+      className={`flex h-full flex-col rounded-xl border bg-white p-5 shadow-sm transition ${
+        applied ? "border-slate-200 opacity-90" : "border-slate-200 hover:border-blue-200 hover:shadow-md"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-gradient-to-r from-yellow-300 to-lime-300 px-3 py-1 text-xs font-bold text-emerald-950">
+        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-inset ring-blue-100">
           {employmentLabel(job.employment_type)}
         </span>
         {job.us_work_auth && (
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+          <span className="rounded-md bg-slate-50 px-2 py-0.5 text-xs text-slate-600 ring-1 ring-inset ring-slate-200">
             {job.us_work_auth}
           </span>
         )}
         {applied && (
-          <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow">
+          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
             Applied
           </span>
         )}
       </div>
 
-      <h2 className="mt-4 text-lg font-bold text-emerald-950">{job.title}</h2>
-      <p className="mt-1 text-sm font-semibold text-emerald-800">
+      <h2 className="mt-3 text-base font-semibold text-slate-900">{job.title}</h2>
+      <p className="mt-1 text-sm text-slate-600">
         {job.company_name}
-        <span className="mx-2 font-normal text-emerald-400">·</span>
-        <span className="font-medium text-emerald-600">{job.recruiter_name}</span>
+        <span className="mx-1.5 text-slate-300">·</span>
+        {job.recruiter_name}
       </p>
       {job.description && (
-        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-emerald-800/80">{job.description}</p>
+        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600">{job.description}</p>
       )}
 
-      <div className="mt-auto flex flex-1 flex-col justify-end gap-2 pt-6 sm:flex-row sm:items-center">
+      <div className="mt-auto flex flex-1 flex-col justify-end gap-2 pt-5 sm:flex-row sm:items-center">
         {applied ? (
           <>
             <Link
               href={`/applicant/jobs/${job.id}/results`}
-              className="inline-flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:from-emerald-700 hover:to-lime-700 sm:flex-initial"
+              className="inline-flex flex-1 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:flex-initial"
             >
-              View results
+              Results
             </Link>
             <Link
               href={`/applicant/jobs/${job.id}`}
-              className="inline-flex flex-1 items-center justify-center rounded-xl border-2 border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50 sm:flex-initial"
+              className="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 sm:flex-initial"
             >
               Details
             </Link>
@@ -70,9 +68,9 @@ export function JobCard({ job, appliedInterviewId }: Props) {
         ) : (
           <Link
             href={`/applicant/jobs/${job.id}`}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-yellow-400 to-lime-500 px-4 py-3 text-sm font-black text-emerald-950 shadow-md transition hover:brightness-105 sm:w-auto"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
           >
-            View role →
+            View role
           </Link>
         )}
       </div>
