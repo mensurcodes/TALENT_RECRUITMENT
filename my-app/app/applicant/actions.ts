@@ -110,19 +110,19 @@ function mockQuestions(job: JobRow): AssessmentQuestion[] {
   return [
     {
       id: "q1",
-      prompt: `For "${title}" at ${company}: describe a concrete project from your background (resume or GitHub) that proves you can own a feature end-to-end. What was ambiguous and how did you resolve it?`,
+      prompt: `For "${title}" at ${company}: walk through a concrete part of your GitHub repository (name files or modules) that shows how you would deliver work in this role. What trade-offs did you make?`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q2",
-      prompt: `Given your repository’s stated stack and README themes, what is one reliability or security risk you would address before shipping to users, and what change would you make?`,
+      prompt: `From your repo’s structure, README, and stack: what is one reliability or security risk you would address before shipping to users, and what change would you make?`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q3",
-      prompt: `The role emphasizes collaboration. Tell us about a time you improved code review or documentation in a team setting, referencing specifics from your experience.`,
+      prompt: `How would you onboard a teammate to this codebase? Reference real paths, conventions, or docs visible in the repository.`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
@@ -146,7 +146,7 @@ function mockEvaluation(
       job.grading_rubric ? "Recruiter rubric was present for future AI grading." : "",
     ].filter(Boolean),
     improvements: [
-      "Set OPENAI_API_KEY to grade against the recruiter rubric and resume/GitHub context.",
+      "Set OPENAI_API_KEY to grade against the recruiter rubric and GitHub/repo context.",
     ],
     rubricBreakdown: [
       {
@@ -158,8 +158,6 @@ function mockEvaluation(
     ],
   };
 }
-
-const MAX_PDF_BYTES = 8 * 1024 * 1024;
 
 export async function buildAssessmentFromApplyForm(
   formData: FormData,
@@ -189,56 +187,43 @@ export async function buildAssessmentFromApplyForm(
     return { error: "ALREADY_APPLIED" };
   }
 
-  const resumeFile = formData.get("resumePdf");
-  const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
+  const gh = await fetchGithubContext(githubUrl);
+  if (!gh) {
+    return {
+      error:
+        "Could not load that GitHub repository. Use a public github.com URL (owner/repo), or add GITHUB_TOKEN in .env.local for higher limits and private repos your token can read.",
+    };
+  }
 
+  const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
   let resumePlain = "";
   let resumeLabel = "";
-
-  if (resumeFile instanceof File && resumeFile.size > 0) {
-    if (resumeFile.size > MAX_PDF_BYTES) {
-      return { error: "PDF must be 8MB or smaller." };
-    }
-    const name = resumeFile.name.toLowerCase();
-    const type = resumeFile.type;
-    if (type && type !== "application/pdf" && !type.includes("pdf") && !name.endsWith(".pdf")) {
-      return { error: "Resume upload must be a PDF file." };
-    }
-    const buf = Buffer.from(await resumeFile.arrayBuffer());
-    const { extractPdfText } = await import("./lib/pdf");
-    const parsed = await extractPdfText(buf);
-    if (parsed.error) return { error: parsed.error };
-    resumePlain = parsed.text;
-    resumeLabel = `PDF: ${resumeFile.name}`;
-  } else if (resumeUrl) {
+  if (resumeUrl) {
     resumePlain = await fetchResumeExcerpt(resumeUrl);
     resumeLabel = resumeUrl;
-  } else {
-    return { error: "Upload a PDF resume or enter a resume URL." };
   }
 
   const resumeDigest = resumePlain.slice(0, 8000);
-  const gh = await fetchGithubContext(githubUrl);
-  const codebaseDigest = gh
-    ? [
-        `Repo: ${gh.owner}/${gh.repo}`,
-        gh.codebaseIndexed
-          ? "Public repo: default-branch file tree + source excerpts were fetched via GitHub API."
-          : "Public repo metadata only (tree/snippets unavailable — private repo, rate limit, or API error).",
-        gh.description ? `Description: ${gh.description}` : "",
-        gh.language ? `Languages: ${gh.language}` : "",
-        gh.topics.length ? `Topics: ${gh.topics.join(", ")}` : "",
-        gh.fileTreeSample.length
-          ? `Sample file paths (${gh.fileTreeSample.length}):\n${gh.fileTreeSample.join("\n")}`
-          : "",
-        gh.readmeExcerpt ? `README excerpt:\n${gh.readmeExcerpt.slice(0, 4500)}` : "",
-        gh.codeSnippetsDigest
-          ? `Source file excerpts (from public repo):\n${gh.codeSnippetsDigest.slice(0, 12_000)}`
-          : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    : "[GitHub context unavailable — verify URL is a public github.com repo or add GITHUB_TOKEN.]";
+  const codebaseDigest = [
+    `Repo: ${gh.owner}/${gh.repo}`,
+    gh.codebaseIndexed
+      ? "Public repo: default-branch file tree + source excerpts were fetched via GitHub API."
+      : "Public repo metadata only (tree/snippets unavailable — private repo, rate limit, or API error).",
+    gh.description ? `Description: ${gh.description}` : "",
+    gh.language ? `Languages: ${gh.language}` : "",
+    gh.topics.length ? `Topics: ${gh.topics.join(", ")}` : "",
+    gh.fileTreeSample.length
+      ? `Sample file paths (${gh.fileTreeSample.length}):\n${gh.fileTreeSample.join("\n")}`
+      : "",
+    gh.readmeExcerpt ? `README excerpt:\n${gh.readmeExcerpt.slice(0, 4500)}` : "",
+    gh.codeSnippetsDigest
+      ? `Source file excerpts (from public repo):\n${gh.codeSnippetsDigest.slice(0, 12_000)}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const hasResume = resumeDigest.trim().length > 0;
 
   const system = `You are an expert hiring assessor. Output strict JSON only.
 Schema:
@@ -254,18 +239,25 @@ Schema:
 }
 Rules:
 - 3 to 5 questions.
-- Questions MUST reference specifics from the resume excerpt AND from the GitHub evidence (README, file tree, and any source excerpts). Cite concrete file names, folders, languages, or patterns when present. If repo data is thin, say so briefly and still tie to the role.
+- Primary evidence is the GitHub / codebase context (README, file tree, languages, source excerpts). Every question must cite concrete repo details (paths, files, stack, patterns) where possible.
+${
+  hasResume
+    ? `- A resume excerpt is also provided: cross-check it with the repository (e.g. claimed skills vs what the repo shows) and ask hybrid questions that connect both. Do not ask resume-only questions that ignore the repo.`
+    : `- No resume was provided: do not assume a work history document. Ground every question in the repository plus the job description.`
+}
 - prepSeconds always 60. answerSeconds always 300 unless role needs longer (max 420).
-- No boilerplate "tell me about yourself". Make them technical/behavioral hybrids like HackerRank written assessments.`;
+- No boilerplate "tell me about yourself". Make them technical/behavioral hybrids grounded in this codebase.`;
 
   const user = `Job title: ${job.title}
 Company: ${job.company_name}
 Employment: ${job.employment_type ?? "unspecified"}
 Job description:\n${(job.description ?? "").slice(0, 6000)}
 
-Resume excerpt:\n${resumeDigest}
-
-GitHub / codebase context:\n${codebaseDigest.slice(0, 14_000)}`;
+${
+  hasResume
+    ? `Resume excerpt (optional cross-reference with the repo):\n${resumeDigest}\n\n`
+    : `Resume excerpt: (none — questions must come from the repository and role only.)\n\n`
+}GitHub / codebase context:\n${codebaseDigest.slice(0, 16_000)}`;
 
   const parsed = await openaiJson<{ questions: AssessmentQuestion[] }>(system, user);
   let questions: AssessmentQuestion[] =
@@ -354,7 +346,10 @@ Return strict JSON:
 }
 Be candid, actionable, and reference rubric criteria by name when possible.`;
 
-  const user = `Rubric:\n${rubric}\n\nJob: ${job.title} at ${job.company_name}\nDescription:\n${(job.description ?? "").slice(0, 4000)}\n\nResume digest:\n${generated.resumeDigest.slice(0, 2500)}\n\nCodebase digest:\n${generated.codebaseDigest.slice(0, 2500)}\n\nInterview answers:\n${qa}`;
+  const resumePart = generated.resumeDigest.trim();
+  const resumeBlock = resumePart.slice(0, 2500) || "(Not provided — score using job fit, rubric, answers, and repo context below.)";
+  const codeBlock = generated.codebaseDigest.slice(0, resumePart ? 2500 : 4500);
+  const user = `Rubric:\n${rubric}\n\nJob: ${job.title} at ${job.company_name}\nDescription:\n${(job.description ?? "").slice(0, 4000)}\n\nResume digest:\n${resumeBlock}\n\nCodebase digest:\n${codeBlock}\n\nInterview answers:\n${qa}`;
 
   const out = await openaiJson<RubricEvaluation>(system, user);
   if (
