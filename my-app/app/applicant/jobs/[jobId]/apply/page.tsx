@@ -9,11 +9,13 @@ import { requireApplicantSession } from "../../../lib/auth";
 
 type Props = {
   params: Promise<{ jobId: string }>;
+  searchParams: Promise<{ assessment?: string }>;
 };
 
-export default async function ApplyPage({ params }: Props) {
+export default async function ApplyPage({ params, searchParams }: Props) {
   const applicantId = await requireApplicantSession();
   const { jobId: raw } = await params;
+  const { assessment: assessmentParam } = await searchParams;
   const jobId = Number(raw);
   if (!Number.isFinite(jobId)) redirect("/applicant/jobs");
 
@@ -45,6 +47,12 @@ export default async function ApplyPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-10">
+      {assessmentParam === "cancelled" ? (
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+          Your assessment was ended because you left the assessment page. You can start again from this application
+          form.
+        </div>
+      ) : null}
       <div>
         <Link
           href={`/applicant/jobs/${job.id}`}

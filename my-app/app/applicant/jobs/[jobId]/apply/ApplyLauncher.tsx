@@ -64,6 +64,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
         githubUrl: githubUrl.trim(),
         generated: res.generated,
         answers: {},
+        questionDetails: [],
         evaluation: null,
         submittedAt: null,
       };

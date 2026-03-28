@@ -13,6 +13,7 @@ import type {
   GeneratedAssessment,
   InterviewRow,
   JobRow,
+  QuestionAnswerDetail,
   RubricEvaluation,
 } from "./types";
 
@@ -405,7 +406,9 @@ export async function checkExistingApplication(
   const sb = getSupabase();
   const { data, error } = await sb
     .from("interviews")
-    .select("id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at")
+    .select(
+      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at",
+    )
     .eq("applicant_id", applicantId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
@@ -421,7 +424,7 @@ export async function fetchMyInterviews(applicantId: number): Promise<InterviewR
   const { data, error } = await sb
     .from("interviews")
     .select(
-      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at,jobs(title,company_name,employment_type)",
+      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at,jobs(title,company_name,employment_type)",
     )
     .eq("applicant_id", applicantId)
     .order("created_at", { ascending: false });
@@ -439,6 +442,7 @@ export async function saveApplicationResult(input: {
   evaluation: RubricEvaluation;
   resumeLabel: string;
   githubUrl: string;
+  questionDetails: QuestionAnswerDetail[];
 }): Promise<{ ok: true; interviewId: number } | { error: string }> {
   if (!hasSupabaseConfig()) return { error: "Supabase not configured." };
   const sessionId = await getApplicantSessionId();
@@ -468,6 +472,7 @@ export async function saveApplicationResult(input: {
       summary: input.evaluation.summary,
       github_url: input.githubUrl,
       resume_label: input.resumeLabel,
+      answer_details: input.questionDetails,
       submitted_at: new Date().toISOString(),
     })
     .select("id")
@@ -485,7 +490,7 @@ export async function fetchInterviewForJob(
   const { data, error } = await sb
     .from("interviews")
     .select(
-      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at,jobs(title,company_name,employment_type)",
+      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at,jobs(title,company_name,employment_type)",
     )
     .eq("applicant_id", applicantId)
     .eq("job_id", jobId)

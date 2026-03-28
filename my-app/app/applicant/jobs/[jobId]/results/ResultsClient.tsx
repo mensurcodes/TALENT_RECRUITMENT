@@ -94,6 +94,7 @@ export function ResultsClient({
                 evaluation: s.evaluation,
                 resumeLabel: s.resumeUrl ?? "",
                 githubUrl: s.githubUrl ?? "",
+                questionDetails: Array.isArray(s.questionDetails) ? s.questionDetails : [],
               }).catch(() => {});
             }
             return;

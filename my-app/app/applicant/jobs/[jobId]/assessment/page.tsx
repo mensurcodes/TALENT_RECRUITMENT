@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AssessmentLock } from "./AssessmentLock";
 import { AssessmentRunner } from "./AssessmentRunner";
 import { requireApplicantSession } from "../../../lib/auth";
 
@@ -17,12 +17,7 @@ export default async function AssessmentPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
-      <Link
-        href={`/applicant/jobs/${jobId}/apply`}
-        className="text-[13px] font-medium text-blue-600 transition-colors duration-200 hover:text-blue-700"
-      >
-        ← Application
-      </Link>
+      <AssessmentLock jobId={jobId} />
       <AssessmentRunner jobId={jobId} applicantId={applicantId} />
     </div>
   );

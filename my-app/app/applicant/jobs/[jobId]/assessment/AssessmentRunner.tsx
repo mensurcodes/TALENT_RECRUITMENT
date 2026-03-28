@@ -4,15 +4,34 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluateWithRubric, transcribeVideoAnswer } from "../../../actions";
 import { VideoAnswerRecorder } from "../../../components/VideoAnswerRecorder";
-import type { AssessmentQuestion, StoredAssessment } from "../../../types";
+import type { AssessmentQuestion, QuestionAnswerDetail, StoredAssessment } from "../../../types";
 import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
+
+const LOCK_KEY = (jobId: number) => `talent_assessment_lock_${jobId}`;
+/** Raw WebM size cap before we skip inline base64 (keeps DB row reasonable). */
+const MAX_INLINE_VIDEO_BYTES = 900_000;
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => {
+      const s = r.result as string;
+      const i = s.indexOf(",");
+      resolve(i >= 0 ? s.slice(i + 1) : s);
+    };
+    r.onerror = () => reject(new Error("read failed"));
+    r.readAsDataURL(blob);
+  });
+}
 
 function loadStored(): StoredAssessment | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(APPLICANT_ASSESSMENT_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredAssessment;
+    const s = JSON.parse(raw) as StoredAssessment;
+    if (!Array.isArray(s.questionDetails)) s.questionDetails = [];
+    return s;
   } catch {
     return null;
   }
@@ -53,6 +72,10 @@ export function AssessmentRunner({
       router.replace(`/applicant/jobs/${jobId}/apply`);
       return;
     }
+    if (s.evaluation) {
+      router.replace(`/applicant/jobs/${jobId}/results`);
+      return;
+    }
     setStored(s);
     setHydrated(true);
   }, [applicantId, jobId, router]);
@@ -86,9 +109,10 @@ export function AssessmentRunner({
   }, [hydrated, phase, current?.id]);
 
   const finishAssessment = useCallback(
-    async (nextAnswers: Record<string, string>) => {
+    async (nextAnswers: Record<string, string>, questionDetails: QuestionAnswerDetail[]) => {
       if (!stored) return;
       setBusy(true);
+      sessionStorage.removeItem(LOCK_KEY(jobId));
       const evaluation = await evaluateWithRubric({
         job: stored.job,
         generated: stored.generated,
@@ -98,6 +122,7 @@ export function AssessmentRunner({
       const final: StoredAssessment = {
         ...stored,
         answers: nextAnswers,
+        questionDetails,
         evaluation,
         submittedAt: new Date().toISOString(),
       };
@@ -115,10 +140,14 @@ export function AssessmentRunner({
       submitting.current = true;
       setBanner(null);
 
-      let finalText = text.trim();
+      const notes = text.trim();
       const blob = videoBlobRef.current;
+      let videoTranscript = "";
+      let videoBase64: string | null = null;
+      let videoSkippedReason: string | null = null;
+      const hadVideo = Boolean(blob && blob.size > 0);
 
-      if (blob && blob.size > 0) {
+      if (hadVideo && blob) {
         setTranscribing(true);
         const fd = new FormData();
         fd.append("file", blob, "answer.webm");
@@ -131,32 +160,57 @@ export function AssessmentRunner({
             submitting.current = false;
             return;
           }
-          if (!finalText) finalText = "[No response — time expired]";
+          videoTranscript = "";
         } else {
-          const trans = r.text;
-          finalText = finalText
-            ? `${finalText}\n\n[Video transcript]\n${trans}`
-            : `[Video transcript]\n${trans}`;
+          videoTranscript = r.text;
+        }
+
+        if (blob.size <= MAX_INLINE_VIDEO_BYTES) {
+          try {
+            videoBase64 = await blobToBase64(blob);
+          } catch {
+            videoSkippedReason = "Could not read video for storage.";
+          }
+        } else {
+          videoSkippedReason = `Video larger than ${Math.round(MAX_INLINE_VIDEO_BYTES / 1000)}KB — transcript stored only.`;
         }
       }
 
-      if (!finalText.trim()) {
+      let combined = notes;
+      if (videoTranscript) {
+        combined = combined ? `${combined}\n\n[Video transcript]\n${videoTranscript}` : `[Video transcript]\n${videoTranscript}`;
+      }
+      if (!combined.trim()) {
         if (!auto) {
           setBanner("Record a video answer and/or type a response before submitting.");
           submitting.current = false;
           return;
         }
-        finalText = "[No response — time expired]";
+        combined = "[No response — time expired]";
       }
 
-      const nextAnswers = { ...stored.answers, [current.id]: finalText };
-      const next: StoredAssessment = { ...stored, answers: nextAnswers };
+      const detail: QuestionAnswerDetail = {
+        questionId: current.id,
+        prompt: current.prompt,
+        writtenNotes: notes,
+        videoTranscript,
+        hadVideoRecording: hadVideo,
+        videoWebmBase64: videoBase64,
+        videoSkippedReason,
+        answeredAt: new Date().toISOString(),
+      };
+
+      const prevDetails = stored.questionDetails.filter((d) => d.questionId !== current.id);
+      const questionDetails = [...prevDetails, detail];
+
+      const nextAnswers = { ...stored.answers, [current.id]: combined };
+      const next: StoredAssessment = { ...stored, answers: nextAnswers, questionDetails };
       saveStored(next);
       setStored(next);
       videoBlobRef.current = null;
 
       if (index >= questions.length - 1) {
-        await finishAssessment(nextAnswers);
+        await finishAssessment(nextAnswers, questionDetails);
         submitting.current = false;
         return;
       }
@@ -243,7 +297,7 @@ export function AssessmentRunner({
           <p className="text-[13px] leading-relaxed text-slate-700">
             {phase === "prep"
               ? "Review the question. Preparation time before you answer."
-              : "Record your response. You may add written notes. Video is transcribed for grading."}
+              : "Record your response. You may add written notes. Video is transcribed and stored with your interview."}
           </p>
         </div>
 

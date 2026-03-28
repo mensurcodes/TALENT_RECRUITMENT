@@ -62,6 +62,8 @@ create table public.interviews (
   summary text,
   github_url text,
   resume_label text,
+  /** Per-question prompts, notes, video transcript, optional inline video (see app types). */
+  answer_details jsonb,
   submitted_at timestamptz default now(),
   created_at timestamptz default now()
 );

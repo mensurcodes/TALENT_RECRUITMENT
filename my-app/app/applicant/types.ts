@@ -46,6 +46,22 @@ export type RubricEvaluation = {
   rubricBreakdown: { criterion: string; score: number; max: number; note: string }[];
 };
 
+/** One question’s stored responses (tied to interview.answer_details in DB). */
+export type QuestionAnswerDetail = {
+  questionId: string;
+  prompt: string;
+  writtenNotes: string;
+  /** Whisper / speech-to-text from video */
+  videoTranscript: string;
+  /** True when a video was recorded (may still be false if inline body omitted) */
+  hadVideoRecording: boolean;
+  /** Inline base64 payload for small WebM clips only */
+  videoWebmBase64: string | null;
+  /** If video was too large to store inline */
+  videoSkippedReason: string | null;
+  answeredAt: string;
+};
+
 export type InterviewRow = {
   id: number;
   job_id: number;
@@ -59,6 +75,7 @@ export type InterviewRow = {
   summary: string | null;
   github_url: string | null;
   resume_label: string | null;
+  answer_details?: QuestionAnswerDetail[] | null;
   submitted_at: string | null;
   created_at: string;
   /** joined from jobs when fetched with job data */
@@ -75,7 +92,10 @@ export type StoredAssessment = {
   resumeUrl: string;
   githubUrl: string;
   generated: GeneratedAssessment;
+  /** Combined text per question (notes + transcript) for rubric scoring */
   answers: Record<string, string>;
+  /** Structured storage for DB / review */
+  questionDetails: QuestionAnswerDetail[];
   evaluation: RubricEvaluation | null;
   submittedAt: string | null;
 };
