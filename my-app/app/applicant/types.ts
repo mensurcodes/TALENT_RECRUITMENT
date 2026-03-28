@@ -46,6 +46,25 @@ export type RubricEvaluation = {
   rubricBreakdown: { criterion: string; score: number; max: number; note: string }[];
 };
 
+export type InterviewRow = {
+  id: number;
+  job_id: number;
+  applicant_id: number | null;
+  applicant_name: string;
+  recruiter_name: string;
+  result: string | null;
+  feedback: string | null;
+  score: number | null;
+  max_score: number | null;
+  summary: string | null;
+  github_url: string | null;
+  resume_label: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  /** joined from jobs when fetched with job data */
+  job?: Pick<JobRow, "title" | "company_name" | "employment_type">;
+};
+
 export const APPLICANT_ASSESSMENT_KEY = "talent_applicant_assessment_v1";
 
 export type StoredAssessment = {

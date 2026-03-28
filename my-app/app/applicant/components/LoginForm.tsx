@@ -27,9 +27,20 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-6 rounded-2xl border border-white/10 bg-white/[0.03] p-8">
-      <div className="space-y-2">
-        <label htmlFor="applicant-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+    <form
+      onSubmit={onSubmit}
+      className="mx-auto max-w-sm space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-xl"
+    >
+      <div className="mb-6 text-center">
+        <p className="text-base font-semibold text-white">Welcome back</p>
+        <p className="mt-1 text-sm text-zinc-500">Sign in to your applicant account</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor="applicant-username"
+          className="block text-xs font-semibold uppercase tracking-widest text-zinc-500"
+        >
           Username
         </label>
         <input
@@ -38,11 +49,15 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none ring-cyan-500/40 focus:ring-2"
+          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/40"
         />
       </div>
-      <div className="space-y-2">
-        <label htmlFor="applicant-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor="applicant-password"
+          className="block text-xs font-semibold uppercase tracking-widest text-zinc-500"
+        >
           Password
         </label>
         <input
@@ -51,21 +66,37 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none ring-cyan-500/40 focus:ring-2"
+          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/40"
         />
       </div>
-      {error ? (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-100">{error}</p>
-      ) : null}
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200">
+          <svg className="h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          {error}
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-cyan-500 py-2.5 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400 disabled:opacity-60"
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 py-2.5 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? (
+          <>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#041018]/30 border-t-[#041018]" />
+            Signing in…
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
-      <p className="text-center text-xs text-zinc-600">
-        Uses your row in <code className="text-zinc-500">applicants</code> (username + password).
+
+      <p className="text-center text-xs text-zinc-700">
+        Credentials from the <code className="text-zinc-600">applicants</code> table in Supabase.
       </p>
     </form>
   );

@@ -19,7 +19,7 @@ export function LogoutButton() {
         router.refresh();
         setPending(false);
       }}
-      className="text-sm text-zinc-400 transition hover:text-white disabled:opacity-50"
+      className="rounded-md px-3 py-1.5 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
     >
       {pending ? "Signing out…" : "Log out"}
     </button>

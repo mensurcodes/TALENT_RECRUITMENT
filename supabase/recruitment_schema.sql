@@ -52,10 +52,17 @@ create table public.jobs (
 create table public.interviews (
   id bigserial primary key,
   job_id bigint not null references public.jobs (id) on delete cascade,
+  applicant_id bigint references public.applicants (id) on delete cascade,
   applicant_name text not null,
   recruiter_name text not null,
   result text,
   feedback text,
+  score int,
+  max_score int,
+  summary text,
+  github_url text,
+  resume_label text,
+  submitted_at timestamptz default now(),
   created_at timestamptz default now()
 );
 

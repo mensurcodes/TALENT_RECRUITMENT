@@ -11,6 +11,7 @@ import type {
   ApplicantRow,
   AssessmentQuestion,
   GeneratedAssessment,
+  InterviewRow,
   JobRow,
   RubricEvaluation,
 } from "./types";
@@ -181,6 +182,11 @@ export async function buildAssessmentFromApplyForm(
   if (!applicant) return { error: "Applicant not found." };
   if (!jobMatchesApplicant(job.employment_type, normalizeEmployment(applicant.employment_type))) {
     return { error: "This job does not match your employment preference." };
+  }
+
+  const alreadyApplied = await checkExistingApplication(sessionId, jobId);
+  if (alreadyApplied) {
+    return { error: "ALREADY_APPLIED" };
   }
 
   const resumeFile = formData.get("resumePdf");
@@ -359,6 +365,106 @@ Be candid, actionable, and reference rubric criteria by name when possible.`;
   }
 
   return mockEvaluation(job, generated.questions, answers);
+}
+
+export async function checkExistingApplication(
+  applicantId: number,
+  jobId: number,
+): Promise<InterviewRow | null> {
+  if (!hasSupabaseConfig()) return null;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .select("id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at")
+    .eq("applicant_id", applicantId)
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as InterviewRow;
+}
+
+export async function fetchMyInterviews(applicantId: number): Promise<InterviewRow[]> {
+  if (!hasSupabaseConfig()) return [];
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .select(
+      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at,jobs(title,company_name,employment_type)",
+    )
+    .eq("applicant_id", applicantId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  type RawRow = InterviewRow & { jobs: InterviewRow["job"] };
+  return (data as unknown as RawRow[]).map((row) => ({
+    ...row,
+    job: row.jobs,
+  }));
+}
+
+export async function saveApplicationResult(input: {
+  jobId: number;
+  applicantId: number;
+  evaluation: RubricEvaluation;
+  resumeLabel: string;
+  githubUrl: string;
+}): Promise<{ ok: true; interviewId: number } | { error: string }> {
+  if (!hasSupabaseConfig()) return { error: "Supabase not configured." };
+  const sessionId = await getApplicantSessionId();
+  if (!sessionId || sessionId !== input.applicantId) return { error: "Unauthorized." };
+
+  const [job, applicant] = await Promise.all([
+    fetchJob(input.jobId),
+    fetchApplicant(input.applicantId),
+  ]);
+  if (!job || !applicant) return { error: "Job or applicant not found." };
+
+  // upsert: only insert once per applicant + job
+  const existing = await checkExistingApplication(input.applicantId, input.jobId);
+  if (existing) return { ok: true, interviewId: existing.id };
+
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .insert({
+      job_id: input.jobId,
+      applicant_id: input.applicantId,
+      applicant_name: applicant.name,
+      recruiter_name: job.recruiter_name,
+      result: `${input.evaluation.overallScore}/${input.evaluation.maxScore}`,
+      score: input.evaluation.overallScore,
+      max_score: input.evaluation.maxScore,
+      summary: input.evaluation.summary,
+      github_url: input.githubUrl,
+      resume_label: input.resumeLabel,
+      submitted_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Failed to save." };
+  return { ok: true, interviewId: (data as { id: number }).id };
+}
+
+export async function fetchInterviewForJob(
+  applicantId: number,
+  jobId: number,
+): Promise<(InterviewRow & { job: InterviewRow["job"] }) | null> {
+  if (!hasSupabaseConfig()) return null;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .select(
+      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,submitted_at,created_at,jobs(title,company_name,employment_type)",
+    )
+    .eq("applicant_id", applicantId)
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as unknown as InterviewRow & { jobs: InterviewRow["job"] };
+  return { ...row, job: row.jobs };
 }
 
 export async function loginApplicant(

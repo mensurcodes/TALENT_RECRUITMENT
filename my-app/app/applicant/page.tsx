@@ -6,28 +6,22 @@ import { hasSupabaseConfig } from "./lib/supabase";
 
 export default async function ApplicantHomePage() {
   const sessionId = await getApplicantSessionId();
-  if (sessionId) {
-    redirect("/applicant/jobs");
-  }
+  if (sessionId) redirect("/applicant/jobs");
 
   const ok = hasSupabaseConfig();
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400/90">
-          Applicant portal
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10">
+      {/* Brand mark */}
+      <div className="text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-2xl font-black text-cyan-300">
+          T
+        </div>
+        <h1 className="mt-4 text-xl font-semibold text-white">Talent Recruitment</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Apply to matched roles and complete AI-powered assessments
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Sign in
-        </h1>
-        <p className="max-w-2xl text-base leading-relaxed text-zinc-400">
-          Use the <span className="text-zinc-200">username</span> and{" "}
-          <span className="text-zinc-200">password</span> from your{" "}
-          <code className="text-zinc-300">applicants</code> row in Supabase. Then browse matched
-          jobs, apply, and complete the video assessment.
-        </p>
-      </section>
+      </div>
 
       {!ok ? <SupabaseNotice /> : <LoginForm />}
     </div>
