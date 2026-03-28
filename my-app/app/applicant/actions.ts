@@ -158,30 +158,61 @@ function mockEvaluation(
   };
 }
 
-export async function buildAssessmentPayload(
-  jobId: number,
-  applicantId: number,
-  resumeUrl: string,
-  githubUrl: string,
-): Promise<{ job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment } | { error: string }> {
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+
+export async function buildAssessmentFromApplyForm(
+  formData: FormData,
+): Promise<
+  | { job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment; resumeLabel: string }
+  | { error: string }
+> {
   if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
   const sessionId = await getApplicantSessionId();
-  if (!sessionId || sessionId !== applicantId) {
-    return { error: "Sign in to continue." };
-  }
-  const [job, applicant] = await Promise.all([fetchJob(jobId), fetchApplicant(applicantId)]);
+  if (!sessionId) return { error: "Sign in to continue." };
+
+  const jobId = Number(formData.get("jobId"));
+  if (!Number.isFinite(jobId) || jobId <= 0) return { error: "Invalid job." };
+
+  const githubUrl = String(formData.get("githubUrl") ?? "").trim();
+  if (!githubUrl) return { error: "GitHub repository URL is required." };
+
+  const [job, applicant] = await Promise.all([fetchJob(jobId), fetchApplicant(sessionId)]);
   if (!job) return { error: "Job not found." };
   if (!applicant) return { error: "Applicant not found." };
   if (!jobMatchesApplicant(job.employment_type, normalizeEmployment(applicant.employment_type))) {
     return { error: "This job does not match your employment preference." };
   }
 
-  const [resumeText, gh] = await Promise.all([
-    fetchResumeExcerpt(resumeUrl),
-    fetchGithubContext(githubUrl),
-  ]);
+  const resumeFile = formData.get("resumePdf");
+  const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
 
-  const resumeDigest = resumeText.slice(0, 8000);
+  let resumePlain = "";
+  let resumeLabel = "";
+
+  if (resumeFile instanceof File && resumeFile.size > 0) {
+    if (resumeFile.size > MAX_PDF_BYTES) {
+      return { error: "PDF must be 8MB or smaller." };
+    }
+    const name = resumeFile.name.toLowerCase();
+    const type = resumeFile.type;
+    if (type && type !== "application/pdf" && !type.includes("pdf") && !name.endsWith(".pdf")) {
+      return { error: "Resume upload must be a PDF file." };
+    }
+    const buf = Buffer.from(await resumeFile.arrayBuffer());
+    const { extractPdfText } = await import("./lib/pdf");
+    const parsed = await extractPdfText(buf);
+    if (parsed.error) return { error: parsed.error };
+    resumePlain = parsed.text;
+    resumeLabel = `PDF: ${resumeFile.name}`;
+  } else if (resumeUrl) {
+    resumePlain = await fetchResumeExcerpt(resumeUrl);
+    resumeLabel = resumeUrl;
+  } else {
+    return { error: "Upload a PDF resume or enter a resume URL." };
+  }
+
+  const resumeDigest = resumePlain.slice(0, 8000);
+  const gh = await fetchGithubContext(githubUrl);
   const codebaseDigest = gh
     ? [
         `Repo: ${gh.owner}/${gh.repo}`,
@@ -240,7 +271,7 @@ GitHub / codebase context:\n${codebaseDigest.slice(0, 6000)}`;
     questions,
   };
 
-  return { job, applicant, generated };
+  return { job, applicant, generated, resumeLabel };
 }
 
 export async function transcribeVideoAnswer(

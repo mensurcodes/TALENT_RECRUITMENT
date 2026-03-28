@@ -49,8 +49,9 @@ export default async function ApplyPage({ params }: Props) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
         <p className="text-sm leading-relaxed text-zinc-400">
-          We pull your resume and GitHub context server-side, generate role-specific written
-          questions, then score answers against the recruiter&apos;s rubric.
+          Upload a PDF resume (or paste a resume link), add your GitHub repo URL, and we&apos;ll
+          pull context server-side, generate role-specific questions, then score answers against the
+          recruiter&apos;s rubric.
         </p>
         <div className="mt-6">
           <ApplyLauncher job={job} applicant={applicant} />
