@@ -91,7 +91,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
           required
           value={githubUrl}
           onChange={(e) => setGithubUrl(e.target.value)}
-          placeholder="https://github.com/org/repo"
+          placeholder="https://github.com/username/repository-name"
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition-shadow duration-200 focus:border-blue-500/80 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
         />
       </div>

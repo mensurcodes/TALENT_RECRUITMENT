@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { getApplicantSessionId } from "./lib/auth";
 import { APPLICANT_SESSION_COOKIE } from "./lib/constants";
 import { getSupabase, hasSupabaseConfig } from "./lib/supabase";
-import { fetchGithubContext } from "./lib/github";
+import { fetchGithubContext, githubRepoUrlHint } from "./lib/github";
 import { fetchResumeExcerpt } from "./lib/resume";
 import { jobMatchesApplicant, normalizeEmployment } from "./lib/employment";
 import type {
@@ -173,6 +173,8 @@ export async function buildAssessmentFromApplyForm(
 
   const githubUrl = String(formData.get("githubUrl") ?? "").trim();
   if (!githubUrl) return { error: "GitHub repository URL is required." };
+  const urlHint = githubRepoUrlHint(githubUrl);
+  if (urlHint) return { error: urlHint };
 
   const [job, applicant] = await Promise.all([fetchJob(jobId), fetchApplicant(sessionId)]);
   if (!job) return { error: "Job not found." };

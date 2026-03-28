@@ -14,9 +14,62 @@ export type GithubContext = {
   codebaseIndexed: boolean;
 };
 
+/** Single-segment github.com paths that are not user profiles. */
+const GITHUB_TOP_LEVEL_SEGMENTS = new Set([
+  "orgs",
+  "topics",
+  "explore",
+  "marketplace",
+  "sponsors",
+  "features",
+  "team",
+  "enterprise",
+  "pricing",
+  "login",
+  "join",
+  "signup",
+  "settings",
+  "notifications",
+  "collections",
+  "readme",
+]);
+
+/**
+ * If the URL cannot be a repo API target, returns a specific user-facing message.
+ * Profile links like https://github.com/abdulhafizcodes are invalid — we need /owner/repo.
+ */
+export function githubRepoUrlHint(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return "Enter a GitHub repository URL.";
+  let u: URL;
+  try {
+    u = new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`);
+  } catch {
+    return "That does not look like a valid URL.";
+  }
+  const host = u.hostname.replace(/^www\./, "");
+  if (!host.endsWith("github.com") && host !== "github.com") {
+    return "Use a URL on github.com.";
+  }
+  const parts = u.pathname.split("/").filter(Boolean);
+  if (parts.length === 0) {
+    return "Paste a repository URL with two path parts: https://github.com/username/repository-name";
+  }
+  if (parts.length === 1) {
+    const seg = parts[0]!.toLowerCase();
+    if (GITHUB_TOP_LEVEL_SEGMENTS.has(seg)) {
+      return "That is a GitHub site page, not a repository. Use a URL like https://github.com/username/repository-name";
+    }
+    const login = parts[0]!;
+    return `That link is a GitHub profile or organization (“${login}”), not a repository. Open a specific repo and copy its URL — for example https://github.com/${login}/YOUR-REPO-NAME`;
+  }
+  return null;
+}
+
 export function parseGithubRepo(url: string): { owner: string; repo: string } | null {
   try {
-    const u = new URL(url.trim());
+    const t = url.trim();
+    const u = new URL(t.startsWith("http://") || t.startsWith("https://") ? t : `https://${t}`);
     if (!u.hostname.includes("github.com")) return null;
     const parts = u.pathname.split("/").filter(Boolean);
     if (parts.length < 2) return null;
