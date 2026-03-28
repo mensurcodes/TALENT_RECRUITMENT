@@ -102,6 +102,9 @@ function githubApiHeaders(): HeadersInit {
 /** How many public repos to scrape when given a profile URL (limits GitHub API load). */
 const MAX_PROFILE_REPOS = 5;
 
+/** How many repos to list from the API before resume-based ranking. */
+const PROFILE_LIST_LIMIT = 40;
+
 export function parseGithubRepo(url: string): { owner: string; repo: string } | null {
   try {
     const u = normalizeGithubUrl(url);
@@ -143,8 +146,58 @@ async function listPublicReposForLogin(
   if (!Array.isArray(data)) return [];
   const nonForks = data.filter((r) => !r.fork);
   const ordered = nonForks.length > 0 ? nonForks : data;
-  return ordered.slice(0, MAX_PROFILE_REPOS).map((r) => ({ owner: r.owner.login, name: r.name }));
+  return ordered.slice(0, PROFILE_LIST_LIMIT).map((r) => ({ owner: r.owner.login, name: r.name }));
 }
+
+/**
+ * Order repos so those clearly referenced on the resume come first; fill to maxPick from the rest.
+ */
+export function rankReposByResumeMatch(
+  repos: { owner: string; name: string }[],
+  resumePlain: string,
+  maxPick: number,
+): { owner: string; name: string }[] {
+  const resume = resumePlain.toLowerCase();
+  const scored = repos.map((r) => {
+    const full = `${r.owner}/${r.name}`.toLowerCase();
+    let score = 0;
+    if (resume.includes(full)) score += 12;
+    if (resume.includes(`github.com/${r.owner}/${r.name}`.toLowerCase())) score += 12;
+    const nameLower = r.name.toLowerCase();
+    if (resume.includes(nameLower)) score += 5;
+    if (resume.includes(r.owner.toLowerCase())) score += 1;
+    const tokens = r.name.split(/[-_.\s]+/).filter((t) => t.length > 2);
+    for (const t of tokens) {
+      if (resume.includes(t.toLowerCase())) score += 2;
+    }
+    return { r, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const picked: { owner: string; name: string }[] = [];
+  const seen = new Set<string>();
+  for (const { r, score } of scored) {
+    if (picked.length >= maxPick) break;
+    if (score <= 0) continue;
+    const key = `${r.owner}/${r.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(r);
+  }
+  for (const r of repos) {
+    if (picked.length >= maxPick) break;
+    const key = `${r.owner}/${r.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(r);
+  }
+  return picked;
+}
+
+export type GithubFetchResult = {
+  context: GithubContext;
+  /** owner/repo strings we scraped — ordered by resume match when a resume was provided. */
+  reposForQuestions: string[];
+};
 
 function mergeProfileGithubContexts(login: string, contexts: GithubContext[]): GithubContext {
   const block = (c: GithubContext) =>
@@ -491,20 +544,32 @@ async function fetchGithubContextForRepo(
 }
 
 /**
- * Loads one repository, or — for a profile/org URL like https://github.com/username —
- * lists public repos and merges digests from the most recently updated ones.
+ * Loads one repository, or — for a profile/org URL — lists public repos, ranks them against
+ * the resume when provided, merges up to five digests.
  */
-export async function fetchGithubContext(url: string): Promise<GithubContext | null> {
+export async function fetchGithubContext(
+  url: string,
+  resumePlain?: string | null,
+): Promise<GithubFetchResult | null> {
   const headers = githubApiHeaders();
+  const resume = (resumePlain ?? "").trim();
+
   const parsed = parseGithubRepo(url);
   if (parsed) {
-    return fetchGithubContextForRepo(parsed.owner, parsed.repo, headers);
+    const c = await fetchGithubContextForRepo(parsed.owner, parsed.repo, headers);
+    if (!c) return null;
+    return {
+      context: c,
+      reposForQuestions: [`${c.owner}/${c.repo}`],
+    };
   }
   const profileLogin = parseGithubProfileLogin(url);
   if (!profileLogin) return null;
 
-  const repos = await listPublicReposForLogin(profileLogin, headers);
-  if (repos.length === 0) return null;
+  const listed = await listPublicReposForLogin(profileLogin, headers);
+  if (listed.length === 0) return null;
+
+  const ranked = rankReposByResumeMatch(listed, resume, MAX_PROFILE_REPOS);
 
   const profileOpts: RepoFetchOpts = {
     maxFilesToFetch: 8,
@@ -512,10 +577,14 @@ export async function fetchGithubContext(url: string): Promise<GithubContext | n
     maxTreePaths: 70,
   };
   const contexts: GithubContext[] = [];
-  for (const r of repos) {
+  for (const r of ranked) {
     const c = await fetchGithubContextForRepo(r.owner, r.name, headers, profileOpts);
     if (c) contexts.push(c);
   }
   if (contexts.length === 0) return null;
-  return mergeProfileGithubContexts(profileLogin, contexts);
+  const merged = mergeProfileGithubContexts(profileLogin, contexts);
+  return {
+    context: merged,
+    reposForQuestions: ranked.map((r) => `${r.owner}/${r.name}`),
+  };
 }

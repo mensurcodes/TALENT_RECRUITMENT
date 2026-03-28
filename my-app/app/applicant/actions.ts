@@ -104,24 +104,38 @@ export async function fetchJob(jobId: number): Promise<JobRow | null> {
   return data as JobRow;
 }
 
-/** Fallback when OpenAI is unavailable — no job text; repo-only phrasing. */
+const MAX_PDF_BYTES = 8 * 1024 * 1024;
+
+/** Fallback when OpenAI is unavailable — resume + repo, analytical tone, five prompts. */
 function mockQuestions(): AssessmentQuestion[] {
   return [
     {
       id: "q1",
-      prompt: `Using specific file or folder paths from this repository’s tree or excerpts, walk through one area of the codebase: what it does, how it fits the rest of the project, and a trade-off visible in how it’s structured.`,
+      prompt: `Pick a project from your resume that lines up with the GitHub context we have. In plain terms, what problem does that project solve and what stack did you use?`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q2",
-      prompt: `From the README, dependencies, or source excerpts shown for this repo: name one reliability or security concern implied by the current design and what concrete change you would make (reference real paths or config files if present).`,
+      prompt: `In one of those projects, describe the main moving parts of the codebase (e.g. API layer, UI, data layer) and how data flows between them — no need for exact file paths.`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q3",
-      prompt: `How would you onboard another developer to this repository? Reference actual paths, conventions, or documentation that appear in the provided context.`,
+      prompt: `What engineering trade-off did you accept in that project (performance vs simplicity, speed vs correctness, etc.) and why was it reasonable at the time?`,
+      prepSeconds: 60,
+      answerSeconds: 300,
+    },
+    {
+      id: "q4",
+      prompt: `Point to a non-trivial function or module in the repo (describe it as “the part that handles X”) and explain what it does and why it exists — focus on intent, not memorized line-by-line detail.`,
+      prepSeconds: 60,
+      answerSeconds: 300,
+    },
+    {
+      id: "q5",
+      prompt: `If you were to extend that project for twice the traffic or users, what would you harden or refactor first, and what would you leave alone?`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
@@ -188,23 +202,47 @@ export async function buildAssessmentFromApplyForm(
     return { error: "ALREADY_APPLIED" };
   }
 
-  const gh = await fetchGithubContext(githubUrl);
-  if (!gh) {
-    return {
-      error:
-        "Could not load GitHub data. Use a public repo URL (https://github.com/owner/repo) or a profile URL (https://github.com/username) — we merge up to five recently updated public repos. Unknown users, private-only activity, or rate limits: add GITHUB_TOKEN to .env.local.",
-    };
-  }
-
+  const resumeFile = formData.get("resumePdf");
   const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
+
   let resumePlain = "";
   let resumeLabel = "";
-  if (resumeUrl) {
+
+  if (resumeFile instanceof File && resumeFile.size > 0) {
+    if (resumeFile.size > MAX_PDF_BYTES) {
+      return { error: "PDF must be 8MB or smaller." };
+    }
+    const name = resumeFile.name.toLowerCase();
+    const type = resumeFile.type;
+    if (type && type !== "application/pdf" && !type.includes("pdf") && !name.endsWith(".pdf")) {
+      return { error: "Resume upload must be a PDF file." };
+    }
+    const buf = Buffer.from(await resumeFile.arrayBuffer());
+    const { extractPdfText } = await import("./lib/pdf");
+    const parsed = await extractPdfText(buf);
+    if (parsed.error) return { error: parsed.error };
+    resumePlain = parsed.text;
+    resumeLabel = `PDF: ${resumeFile.name}`;
+  } else if (resumeUrl) {
     resumePlain = await fetchResumeExcerpt(resumeUrl);
     resumeLabel = resumeUrl;
+  } else {
+    return { error: "Upload a PDF resume or paste a resume URL so we can align questions with projects you list." };
   }
 
   const resumeDigest = resumePlain.slice(0, 8000);
+
+  const ghResult = await fetchGithubContext(githubUrl, resumePlain);
+  if (!ghResult) {
+    return {
+      error:
+        "Could not load GitHub data. Use a public repo URL (https://github.com/owner/repo) or a profile URL (https://github.com/username) — we merge up to five public repos (prioritized by your resume). Unknown users, private-only activity, or rate limits: add GITHUB_TOKEN to .env.local.",
+    };
+  }
+
+  const gh = ghResult.context;
+  const reposForQuestions = ghResult.reposForQuestions;
+
   const codebaseDigest = [
     `Repo: ${gh.owner}/${gh.repo}`,
     gh.codebaseIndexed
@@ -224,26 +262,26 @@ export async function buildAssessmentFromApplyForm(
     .filter(Boolean)
     .join("\n\n");
 
-  const system = `You are an expert technical assessor. Output strict JSON only.
+  const system = `You are an expert technical interviewer. Output strict JSON only.
 Schema:
 {
   "questions": [
-    {
-      "id": "q1",
-      "prompt": "string",
-      "prepSeconds": 60,
-      "answerSeconds": 300
-    }
+    { "id": "q1", "prompt": "string", "prepSeconds": 60, "answerSeconds": 300 }
   ]
 }
 Rules:
-- 3 to 5 questions.
-- You will receive ONLY a GitHub repository digest (no job posting, employer, or role description). Do not invent a role or ask the candidate to relate answers to a specific job, company, or hiring context.
-- Every question must be answerable using only that digest. Each prompt must reference concrete evidence from it: real file paths, README phrases, dependencies, languages, tree structure, or quoted patterns from source excerpts. If the digest is thin, ask probing questions about what little is shown rather than going generic.
-- Do not ask "tell me about yourself" or career history unrelated to this repository.
-- prepSeconds always 60. answerSeconds always 300 unless the repo complexity clearly needs longer (max 420).`;
+- Exactly 5 questions (ids q1–q5).
+- You receive the candidate's resume excerpt AND a GitHub digest (one repo or several merged). Use BOTH: questions should test whether they understand work they claim and how it shows up in code.
+- Prefer projects/repos that appear on the resume. The digest may include several repositories — prioritize those listed under "Repositories to emphasize" when they overlap the resume; if a repo is not on the resume, do not center questions on it unless the digest only contains that repo.
+- Question style: engineering judgment, design trade-offs, why an approach or algorithm fits the problem, what a key function or subsystem does in plain language. Good: goals of a project, stack, data flow, reliability/scalability instincts, "why this over that". Bad: trivia like reciting npm scripts from package.json, memorized exact paths, or "what line does X". You may refer to code as "in this project", "in the main game logic file", "the API layer" — not full owner/repo/path strings unless one short name helps clarity.
+- Do not mention employers or job postings unless the resume names them; no "tell me about yourself" filler.
+- prepSeconds always 60. answerSeconds always 300 unless a question clearly needs 360–420 for depth.`;
 
-  const user = `GitHub repository digest (sole input for questions):\n${codebaseDigest.slice(0, 18_000)}`;
+  const user = `Resume excerpt:\n${resumeDigest}
+
+Repositories to emphasize (resume-matched first when using a profile URL):\n${reposForQuestions.join(", ") || "(single repo)"}
+
+GitHub / codebase digest:\n${codebaseDigest.slice(0, 16_000)}`;
 
   const parsed = await openaiJson<{ questions: AssessmentQuestion[] }>(system, user);
   let questions: AssessmentQuestion[] =
@@ -254,7 +292,9 @@ Rules:
       answerSeconds: Number(q.answerSeconds) > 0 ? Number(q.answerSeconds) : 300,
     })) ?? [];
 
-  if (questions.length < 3) {
+  if (questions.length >= 5) {
+    questions = questions.slice(0, 5);
+  } else {
     questions = mockQuestions();
   }
 
