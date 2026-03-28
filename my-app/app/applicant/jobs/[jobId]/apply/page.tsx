@@ -21,7 +21,7 @@ export default async function ApplyPage({ params }: Props) {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/applicant" className="text-sm text-cyan-400 hover:text-cyan-300">
+        <Link href="/applicant" className="text-sm font-bold text-emerald-800 underline">
           ← Back
         </Link>
       </div>
@@ -39,55 +39,47 @@ export default async function ApplyPage({ params }: Props) {
     redirect("/applicant/jobs");
   }
 
-  // Already applied — redirect to results
   if (existing) {
     redirect(`/applicant/jobs/${jobId}/results`);
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      {/* Header */}
+    <div className="mx-auto w-full max-w-4xl space-y-8">
       <div>
         <Link
           href={`/applicant/jobs/${job.id}`}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-300"
+          className="text-sm font-bold text-emerald-700 hover:text-emerald-950"
         >
           ← {job.title}
         </Link>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
-          Submit your application
-        </h1>
-        <p className="mt-1.5 text-sm text-zinc-400">
+        <h1 className="mt-4 text-3xl font-black text-emerald-950 sm:text-4xl">Submit application</h1>
+        <p className="mt-2 text-lg font-semibold text-emerald-800">
           {job.company_name}
-          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="mx-2 text-emerald-300">·</span>
           {job.employment_type ?? "Role"}
         </p>
       </div>
 
-      {/* How it works */}
-      <ol className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { n: "1", label: "Upload resume + GitHub", desc: "PDF or link — we extract text server-side." },
-          { n: "2", label: "AI generates questions", desc: "Role-specific, based on your experience." },
-          { n: "3", label: "Timed assessment", desc: "Answer written/video questions at your own pace." },
-        ].map((step) => (
-          <li
-            key={step.n}
-            className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+          { n: "1", t: "Resume + GitHub", d: "We read your PDF or link + public repo files." },
+          { n: "2", t: "AI questions", d: "Tailored prompts from your real codebase context." },
+          { n: "3", t: "Assessment", d: "Timed answers — video + optional notes." },
+        ].map((s) => (
+          <div
+            key={s.n}
+            className="rounded-2xl border-2 border-lime-200 bg-white p-4 shadow-md"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-xs font-bold text-cyan-300">
-              {step.n}
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-300 text-sm font-black text-emerald-950">
+              {s.n}
             </span>
-            <div>
-              <p className="text-xs font-semibold text-zinc-200">{step.label}</p>
-              <p className="mt-0.5 text-xs text-zinc-500">{step.desc}</p>
-            </div>
-          </li>
+            <p className="mt-2 font-bold text-emerald-950">{s.t}</p>
+            <p className="mt-1 text-xs font-medium text-emerald-800">{s.d}</p>
+          </div>
         ))}
-      </ol>
+      </div>
 
-      {/* Form */}
-      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+      <section className="rounded-3xl border-2 border-white bg-white p-6 shadow-xl sm:p-8">
         <ApplyLauncher job={job} applicant={applicant} />
       </section>
     </div>

@@ -117,27 +117,24 @@ export function VideoAnswerRecorder({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-black/30 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-white">Video answer</h3>
-          <p className="text-xs text-zinc-500">
-            Camera + mic. Your response is transcribed for grading (Whisper). Allow browser
-            permissions when asked.
-          </p>
-        </div>
+    <div className="space-y-4 rounded-2xl border-2 border-emerald-200 bg-gradient-to-b from-white to-lime-50/50 p-5 shadow-inner">
+      <div>
+        <h3 className="text-sm font-black text-emerald-950">Video answer</h3>
+        <p className="text-xs font-medium text-emerald-800">
+          Allow camera + mic. Your clip is sent to Whisper for transcription.
+        </p>
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+        <p className="rounded-xl border-2 border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-900">
           {error}
         </p>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Live</p>
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Live</p>
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-emerald-950 ring-2 ring-lime-300">
             <video
               ref={liveRef}
               className="h-full w-full object-cover"
@@ -146,22 +143,22 @@ export function VideoAnswerRecorder({
               autoPlay
             />
             {status === "recording" ? (
-              <span className="absolute left-2 top-2 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+              <span className="absolute left-2 top-2 rounded-md bg-red-600 px-2 py-0.5 text-xs font-black text-white">
                 REC
               </span>
             ) : null}
           </div>
         </div>
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Playback</p>
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-black ring-1 ring-white/10">
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Playback</p>
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-emerald-950 ring-2 ring-emerald-200">
             <video ref={playbackRef} className="h-full w-full object-cover" playsInline controls />
           </div>
         </div>
       </div>
 
       {status === "requesting" ? (
-        <p className="text-sm text-cyan-200/90">Starting camera…</p>
+        <p className="text-sm font-bold text-lime-700">Starting camera…</p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -172,7 +169,7 @@ export function VideoAnswerRecorder({
               if (status === "recorded") resetRecording();
               void startRecording();
             }}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-zinc-200"
+            className="rounded-xl bg-gradient-to-r from-yellow-400 to-lime-500 px-5 py-2.5 text-sm font-black text-emerald-950 shadow-md"
           >
             {status === "recorded" ? "Record again" : "Start recording"}
           </button>
@@ -181,7 +178,7 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={stopRecording}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
+            className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-black text-white shadow-md"
           >
             Stop
           </button>
@@ -190,9 +187,9 @@ export function VideoAnswerRecorder({
           <button
             type="button"
             onClick={resetRecording}
-            className="rounded-lg border border-white/20 px-4 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+            className="rounded-xl border-2 border-emerald-200 bg-white px-5 py-2.5 text-sm font-bold text-emerald-900"
           >
-            Discard & retake
+            Discard
           </button>
         ) : null}
       </div>

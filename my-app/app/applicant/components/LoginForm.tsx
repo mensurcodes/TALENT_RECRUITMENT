@@ -29,17 +29,17 @@ export function LoginForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto max-w-sm space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-xl"
+      className="w-full max-w-md space-y-5 rounded-3xl border-2 border-emerald-200 bg-white p-8 shadow-2xl shadow-emerald-900/10 ring-4 ring-lime-100"
     >
-      <div className="mb-6 text-center">
-        <p className="text-base font-semibold text-white">Welcome back</p>
-        <p className="mt-1 text-sm text-zinc-500">Sign in to your applicant account</p>
+      <div className="text-center">
+        <p className="text-xl font-bold text-emerald-950">Welcome back</p>
+        <p className="mt-1 text-sm font-medium text-emerald-700">Applicant sign-in</p>
       </div>
 
       <div className="space-y-1.5">
         <label
           htmlFor="applicant-username"
-          className="block text-xs font-semibold uppercase tracking-widest text-zinc-500"
+          className="block text-xs font-bold uppercase tracking-widest text-emerald-700"
         >
           Username
         </label>
@@ -49,14 +49,14 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full rounded-xl border-2 border-emerald-100 bg-lime-50/50 px-4 py-3 text-emerald-950 outline-none transition focus:border-lime-500 focus:ring-2 focus:ring-lime-300"
         />
       </div>
 
       <div className="space-y-1.5">
         <label
           htmlFor="applicant-password"
-          className="block text-xs font-semibold uppercase tracking-widest text-zinc-500"
+          className="block text-xs font-bold uppercase tracking-widest text-emerald-700"
         >
           Password
         </label>
@@ -66,16 +66,12 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/40"
+          className="w-full rounded-xl border-2 border-emerald-100 bg-lime-50/50 px-4 py-3 text-emerald-950 outline-none transition focus:border-lime-500 focus:ring-2 focus:ring-lime-300"
         />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200">
-          <svg className="h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+        <div className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
           {error}
         </div>
       )}
@@ -83,20 +79,20 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 py-2.5 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 py-3.5 text-base font-bold text-white shadow-lg transition hover:from-emerald-700 hover:to-lime-700 disabled:opacity-60"
       >
         {pending ? (
           <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#041018]/30 border-t-[#041018]" />
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
             Signing in…
           </>
         ) : (
-          "Sign in"
+          "Continue →"
         )}
       </button>
 
-      <p className="text-center text-xs text-zinc-700">
-        Credentials from the <code className="text-zinc-600">applicants</code> table in Supabase.
+      <p className="text-center text-xs font-medium text-emerald-600">
+        Demo: credentials from your <code className="rounded bg-lime-100 px-1">applicants</code> table.
       </p>
     </form>
   );

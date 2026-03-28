@@ -5,8 +5,8 @@ import { LogoutButton } from "./components/LogoutButton";
 import { getApplicantSessionId } from "./lib/auth";
 
 export const metadata: Metadata = {
-  title: "Applicant portal",
-  description: "Matched roles, applications, and assessments.",
+  title: "Talent — Applicant",
+  description: "Matched roles, applications, and AI assessments.",
 };
 
 export default async function ApplicantLayout({
@@ -15,33 +15,32 @@ export default async function ApplicantLayout({
   const sessionId = await getApplicantSessionId();
 
   return (
-    <div className="min-h-screen bg-[#060a13] text-zinc-100">
-      {/* Top nav */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#060a13]/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
+    <div className="applicant-pitch min-h-dvh w-full bg-gradient-to-br from-amber-50 via-lime-50 to-emerald-100 text-emerald-950">
+      <header className="sticky top-0 z-50 w-full border-b border-emerald-200/80 bg-white/95 shadow-sm backdrop-blur-md">
+        <div className="flex h-16 w-full items-center justify-between px-4 sm:h-[4.25rem] sm:px-8 lg:px-12">
           <div className="flex items-center gap-3">
             <Link
               href={sessionId ? "/applicant/jobs" : "/applicant"}
-              className="flex items-center gap-2 text-sm font-semibold text-white"
+              className="flex items-center gap-2.5 text-base font-bold tracking-tight text-emerald-900"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500 text-[10px] font-black text-[#041018]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-lime-500 text-sm font-black text-emerald-950 shadow-md ring-2 ring-white">
                 T
               </span>
-              Talent
+              <span className="hidden sm:inline">Talent</span>
             </Link>
             {sessionId && (
               <>
-                <span className="text-zinc-800">/</span>
-                <span className="text-sm text-zinc-500">Applicant portal</span>
+                <span className="text-emerald-300">/</span>
+                <span className="text-sm font-medium text-emerald-700">Applicant</span>
               </>
             )}
           </div>
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 sm:gap-2">
             {sessionId ? (
               <>
                 <Link
                   href="/applicant/jobs"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-lime-100"
                 >
                   Job board
                 </Link>
@@ -50,7 +49,7 @@ export default async function ApplicantLayout({
             ) : (
               <Link
                 href="/applicant"
-                className="rounded-md px-3 py-1.5 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700"
               >
                 Sign in
               </Link>
@@ -59,8 +58,7 @@ export default async function ApplicantLayout({
         </div>
       </header>
 
-      {/* Main */}
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">{children}</main>
+      <main className="w-full px-4 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">{children}</main>
     </div>
   );
 }

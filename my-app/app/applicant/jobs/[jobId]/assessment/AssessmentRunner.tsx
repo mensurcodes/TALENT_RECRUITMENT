@@ -195,7 +195,7 @@ export function AssessmentRunner({
 
   if (!hydrated || !stored) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-zinc-500">
+      <div className="flex min-h-[40vh] items-center justify-center text-sm font-bold text-emerald-700">
         Loading assessment…
       </div>
     );
@@ -204,28 +204,26 @@ export function AssessmentRunner({
   if (busy) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
-        <p className="text-sm text-zinc-400">Scoring with recruiter rubric…</p>
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-lime-200 border-t-emerald-600" />
+        <p className="text-sm font-bold text-emerald-800">Scoring with recruiter rubric…</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="w-full space-y-8">
+      <div className="flex flex-col gap-4 rounded-3xl border-2 border-white bg-white p-6 shadow-xl sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400/90">
-            Timed video interview
-          </p>
-          <h1 className="text-xl font-semibold text-white sm:text-2xl">{stored.job.title}</h1>
-          <p className="text-sm text-zinc-500">
+          <p className="text-xs font-black uppercase tracking-widest text-lime-700">Timed assessment</p>
+          <h1 className="text-2xl font-black text-emerald-950 sm:text-3xl">{stored.job.title}</h1>
+          <p className="mt-1 text-sm font-bold text-emerald-800">
             {stored.job.company_name} · Question {index + 1} of {questions.length}
           </p>
         </div>
-        <div className="w-full max-w-xs sm:w-48">
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="w-full max-w-xs sm:w-56">
+          <div className="h-3 overflow-hidden rounded-full bg-emerald-100">
             <div
-              className="h-full rounded-full bg-cyan-400 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-lime-500 transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -233,38 +231,38 @@ export function AssessmentRunner({
       </div>
 
       {banner ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
           {banner}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#050912] shadow-[0_0_80px_-20px_rgba(34,211,238,0.35)]">
-        <div className="border-b border-white/10 bg-black/40 px-5 py-3">
-          <p className="text-xs text-zinc-500">
+      <div className="overflow-hidden rounded-3xl border-2 border-emerald-200 bg-white shadow-2xl">
+        <div className="border-b-2 border-lime-100 bg-gradient-to-r from-yellow-50 to-lime-50 px-5 py-4">
+          <p className="text-sm font-semibold text-emerald-900">
             {phase === "prep"
-              ? "Read the prompt. Think before the answer window opens."
-              : "Record your video answer (and optionally add notes below). Answers are transcribed for rubric grading."}
+              ? "Read the prompt. Use think time before you record."
+              : "Record your answer + optional notes. Video is transcribed for AI scoring."}
           </p>
         </div>
 
         <div className="space-y-6 p-6 sm:p-8">
           {current ? (
             <>
-              <p className="text-base leading-relaxed text-zinc-100 sm:text-lg">{current.prompt}</p>
+              <p className="text-base font-medium leading-relaxed text-emerald-950 sm:text-lg">
+                {current.prompt}
+              </p>
 
               {phase === "prep" ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 py-12">
-                  <p className="text-sm font-medium text-cyan-100/90">Think time</p>
-                  <p className="font-mono text-4xl font-semibold tabular-nums text-cyan-300">
-                    {prepLeft}s
-                  </p>
-                  <p className="text-xs text-zinc-500">Prep before recording your video response.</p>
+                <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-lime-300 bg-lime-50 py-14">
+                  <p className="text-sm font-black uppercase tracking-widest text-emerald-800">Think time</p>
+                  <p className="font-mono text-5xl font-black tabular-nums text-emerald-700">{prepLeft}s</p>
+                  <p className="text-xs font-medium text-emerald-700">Get ready to record.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-700">
                     <span>Answer window</span>
-                    <span className="font-mono tabular-nums text-cyan-300/90">{answerLeft}s left</span>
+                    <span className="font-mono tabular-nums text-lime-700">{answerLeft}s left</span>
                   </div>
 
                   {current ? (
@@ -277,15 +275,15 @@ export function AssessmentRunner({
                   ) : null}
 
                   <div className="space-y-2">
-                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                      Optional written notes (appended to transcript)
+                    <label className="text-xs font-black uppercase tracking-widest text-emerald-700">
+                      Notes (optional)
                     </label>
                     <textarea
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       rows={5}
-                      className="w-full resize-y rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm leading-relaxed text-zinc-100 outline-none ring-cyan-500/30 focus:ring-2"
-                      placeholder="Add bullet points or clarifications (optional)…"
+                      className="w-full resize-y rounded-xl border-2 border-emerald-100 bg-lime-50/50 px-4 py-3 text-sm font-medium leading-relaxed text-emerald-950 outline-none focus:border-lime-500 focus:ring-2 focus:ring-lime-200"
+                      placeholder="Extra context for the grader…"
                     />
                   </div>
 
@@ -294,19 +292,19 @@ export function AssessmentRunner({
                       type="button"
                       disabled={transcribing}
                       onClick={() => void goNext(draft, false)}
-                      className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 px-6 py-2.5 text-sm font-black text-white shadow-lg disabled:opacity-60"
                     >
-                      {transcribing ? "Transcribing video…" : "Submit answer"}
+                      {transcribing ? "Transcribing…" : "Submit answer →"}
                     </button>
                     {transcribing ? (
-                      <span className="text-xs text-zinc-500">Sending audio to Whisper…</span>
+                      <span className="text-xs font-bold text-emerald-700">Whisper…</span>
                     ) : null}
                   </div>
                 </div>
               )}
             </>
           ) : (
-            <p className="text-sm text-zinc-500">No questions were generated.</p>
+            <p className="text-sm font-bold text-emerald-800">No questions were generated.</p>
           )}
         </div>
       </div>

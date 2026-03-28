@@ -11,15 +11,19 @@ export default async function ApplicantHomePage() {
   const ok = hasSupabaseConfig();
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-10">
-      {/* Brand mark */}
-      <div className="text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-2xl font-black text-cyan-300">
+    <div className="flex min-h-[calc(100dvh-8rem)] w-full flex-col items-center justify-center gap-10">
+      <div className="w-full max-w-xl text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-yellow-400 via-lime-400 to-emerald-500 text-3xl font-black text-white shadow-xl ring-4 ring-white">
           T
         </div>
-        <h1 className="mt-4 text-xl font-semibold text-white">Talent Recruitment</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Apply to matched roles and complete AI-powered assessments
+        <h1 className="mt-6 text-3xl font-black tracking-tight text-emerald-950 sm:text-4xl">
+          Talent Recruitment
+        </h1>
+        <p className="mt-3 text-lg font-medium text-emerald-800">
+          AI-matched roles · video assessments · instant scoring
+        </p>
+        <p className="mt-2 text-sm text-emerald-700/80">
+          Sign in to explore open positions and complete your application in one flow.
         </p>
       </div>
 

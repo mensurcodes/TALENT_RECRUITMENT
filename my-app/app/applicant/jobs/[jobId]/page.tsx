@@ -20,7 +20,7 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/applicant" className="text-sm text-cyan-400 hover:text-cyan-300">
+        <Link href="/applicant" className="text-sm font-bold text-emerald-800 underline">
           ← Back
         </Link>
       </div>
@@ -41,48 +41,44 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
   const alreadyApplied = existing !== null;
 
   return (
-    <article className="space-y-8">
-      {/* Breadcrumb */}
+    <article className="mx-auto w-full max-w-5xl space-y-8">
       <div>
         <Link
           href="/applicant/jobs"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-300"
+          className="text-sm font-bold text-emerald-700 hover:text-emerald-950"
         >
           ← Job board
         </Link>
         <div className="mt-4 flex flex-wrap items-start gap-4">
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-medium text-cyan-200">
+              <span className="rounded-full bg-gradient-to-r from-yellow-300 to-lime-300 px-3 py-1 text-xs font-black text-emerald-950">
                 {job.employment_type ?? "Role"}
               </span>
               {alreadyApplied && (
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/20">
+                <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white shadow">
                   Applied
                 </span>
               )}
             </div>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-emerald-950 sm:text-4xl">
               {job.title}
             </h1>
-            <p className="mt-1.5 text-sm text-zinc-400">
+            <p className="mt-2 text-lg font-semibold text-emerald-800">
               {job.company_name}
-              <span className="mx-1.5 text-zinc-700">·</span>
-              Posted by {job.recruiter_name}
+              <span className="mx-2 text-emerald-300">·</span>
+              {job.recruiter_name}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Already applied banner */}
       {alreadyApplied && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-2 border-emerald-400 bg-gradient-to-r from-lime-100 to-emerald-100 p-5 shadow-md">
           <div>
-            <p className="text-sm font-semibold text-emerald-400">
-              You&apos;ve already submitted an application for this role.
-            </p>
+            <p className="text-base font-black text-emerald-950">You already applied to this role.</p>
             {existing.submitted_at && (
-              <p className="mt-0.5 text-xs text-zinc-500">
+              <p className="mt-1 text-sm font-semibold text-emerald-800">
                 Submitted{" "}
                 {new Date(existing.submitted_at).toLocaleDateString("en-US", {
                   month: "long",
@@ -90,77 +86,69 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
                   year: "numeric",
                 })}
                 {existing.score !== null && (
-                  <> · Score: {existing.score}/{existing.max_score ?? 100}</>
+                  <>
+                    {" "}
+                    · Score <span className="font-black">{existing.score}</span>/
+                    {existing.max_score ?? 100}
+                  </>
                 )}
               </p>
             )}
           </div>
           <Link
             href={`/applicant/jobs/${job.id}/results`}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-[#021a0e] transition hover:bg-emerald-400"
+            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-lg"
           >
-            View my results
+            View results →
           </Link>
         </div>
       )}
 
-      {/* Job details grid */}
-      <section className="grid gap-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 lg:grid-cols-3">
+      <section className="grid gap-6 rounded-3xl border-2 border-white bg-white p-6 shadow-xl lg:grid-cols-3 lg:p-8">
         <div className="space-y-3 lg:col-span-2">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            Job description
-          </h2>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+          <h2 className="text-xs font-black uppercase tracking-widest text-lime-700">Description</h2>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-emerald-900">
             {job.description?.trim() || "No description provided."}
           </p>
         </div>
-        <aside className="space-y-5 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+        <aside className="space-y-5 border-t-2 border-emerald-100 pt-6 lg:border-l-2 lg:border-t-0 lg:pl-6 lg:pt-0">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">
-              Employment
-            </h3>
-            <p className="mt-1.5 text-sm text-zinc-200">{job.employment_type ?? "—"}</p>
+            <h3 className="text-xs font-black uppercase tracking-widest text-emerald-600">Employment</h3>
+            <p className="mt-1.5 font-semibold text-emerald-950">{job.employment_type ?? "—"}</p>
           </div>
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">
-              U.S. work authorization
-            </h3>
-            <p className="mt-1.5 text-sm text-zinc-200">{job.us_work_auth ?? "—"}</p>
+            <h3 className="text-xs font-black uppercase tracking-widest text-emerald-600">Work authorization</h3>
+            <p className="mt-1.5 font-semibold text-emerald-950">{job.us_work_auth ?? "—"}</p>
           </div>
           {job.grading_rubric && (
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-600">
-                Grading rubric
-              </h3>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm text-zinc-400">
-                {job.grading_rubric.trim()}
-              </p>
+              <h3 className="text-xs font-black uppercase tracking-widest text-emerald-600">Rubric</h3>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm text-emerald-800">{job.grading_rubric.trim()}</p>
             </div>
           )}
         </aside>
       </section>
 
-      {/* CTA */}
       <div className="flex flex-wrap gap-3">
         {alreadyApplied ? (
           <>
             <Link
               href={`/applicant/jobs/${job.id}/results`}
-              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-[#021a0e] transition hover:bg-emerald-400"
+              className="rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 px-6 py-3 text-sm font-black text-white shadow-lg"
             >
               View my results
             </Link>
             <Link
               href="/applicant/jobs"
-              className="inline-flex items-center justify-center rounded-lg border border-white/10 px-5 py-2.5 text-sm text-zinc-300 transition hover:border-white/20 hover:text-white"
+              className="rounded-xl border-2 border-emerald-200 bg-white px-6 py-3 text-sm font-bold text-emerald-900"
             >
-              Back to job board
+              Back to board
             </Link>
           </>
         ) : (
           <Link
             href={`/applicant/jobs/${job.id}/apply`}
-            className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400"
+            className="rounded-xl bg-gradient-to-r from-yellow-400 to-lime-500 px-8 py-3.5 text-base font-black text-emerald-950 shadow-lg"
           >
             Apply & start assessment →
           </Link>

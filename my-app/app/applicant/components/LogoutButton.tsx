@@ -19,9 +19,9 @@ export function LogoutButton() {
         router.refresh();
         setPending(false);
       }}
-      className="rounded-md px-3 py-1.5 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+      className="rounded-full border-2 border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:opacity-50"
     >
-      {pending ? "Signing out…" : "Log out"}
+      {pending ? "…" : "Log out"}
     </button>
   );
 }

@@ -222,13 +222,22 @@ export async function buildAssessmentFromApplyForm(
   const codebaseDigest = gh
     ? [
         `Repo: ${gh.owner}/${gh.repo}`,
+        gh.codebaseIndexed
+          ? "Public repo: default-branch file tree + source excerpts were fetched via GitHub API."
+          : "Public repo metadata only (tree/snippets unavailable — private repo, rate limit, or API error).",
         gh.description ? `Description: ${gh.description}` : "",
-        gh.language ? `Primary language: ${gh.language}` : "",
+        gh.language ? `Languages: ${gh.language}` : "",
         gh.topics.length ? `Topics: ${gh.topics.join(", ")}` : "",
-        gh.readmeExcerpt ? `README excerpt:\n${gh.readmeExcerpt.slice(0, 4000)}` : "",
+        gh.fileTreeSample.length
+          ? `Sample file paths (${gh.fileTreeSample.length}):\n${gh.fileTreeSample.join("\n")}`
+          : "",
+        gh.readmeExcerpt ? `README excerpt:\n${gh.readmeExcerpt.slice(0, 4500)}` : "",
+        gh.codeSnippetsDigest
+          ? `Source file excerpts (from public repo):\n${gh.codeSnippetsDigest.slice(0, 12_000)}`
+          : "",
       ]
         .filter(Boolean)
-        .join("\n")
+        .join("\n\n")
     : "[GitHub context unavailable — verify URL is a public github.com repo or add GITHUB_TOKEN.]";
 
   const system = `You are an expert hiring assessor. Output strict JSON only.
@@ -245,7 +254,7 @@ Schema:
 }
 Rules:
 - 3 to 5 questions.
-- Questions MUST reference specifics inferred from resume excerpt and GitHub context (skills, projects, languages). If data is thin, say so in the question and still tie to role.
+- Questions MUST reference specifics from the resume excerpt AND from the GitHub evidence (README, file tree, and any source excerpts). Cite concrete file names, folders, languages, or patterns when present. If repo data is thin, say so briefly and still tie to the role.
 - prepSeconds always 60. answerSeconds always 300 unless role needs longer (max 420).
 - No boilerplate "tell me about yourself". Make them technical/behavioral hybrids like HackerRank written assessments.`;
 
@@ -256,7 +265,7 @@ Job description:\n${(job.description ?? "").slice(0, 6000)}
 
 Resume excerpt:\n${resumeDigest}
 
-GitHub / codebase context:\n${codebaseDigest.slice(0, 6000)}`;
+GitHub / codebase context:\n${codebaseDigest.slice(0, 14_000)}`;
 
   const parsed = await openaiJson<{ questions: AssessmentQuestion[] }>(system, user);
   let questions: AssessmentQuestion[] =

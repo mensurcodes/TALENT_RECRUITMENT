@@ -16,12 +16,12 @@ export default async function AssessmentPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <Link
         href={`/applicant/jobs/${jobId}/apply`}
-        className="text-sm text-cyan-400 hover:text-cyan-300"
+        className="text-sm font-bold text-emerald-700 hover:text-emerald-950"
       >
-        ← Back to application
+        ← Application
       </Link>
       <AssessmentRunner jobId={jobId} applicantId={applicantId} />
     </div>
