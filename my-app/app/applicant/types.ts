@@ -56,8 +56,8 @@ export type QuestionAnswerDetail = {
   /** True when a video was recorded (may still be false if inline body omitted) */
   hadVideoRecording: boolean;
   /**
-   * Path inside Supabase Storage bucket `assessment-videos` (set when SUPABASE_SERVICE_ROLE_KEY is configured).
-   * Format: `{applicantId}/{jobId}/{timestamp}_{questionId}.webm`
+   * Path inside Supabase bucket `assessment-videos` and/or under ASSESSMENT_VIDEO_LOCAL_DIR when set.
+   * Format: `{interviewId}/{timestamp}_{questionId}.webm`
    */
   videoObjectPath?: string | null;
   /** Inline base64 only when storage is unavailable or upload failed; omit for large blobs */
@@ -80,7 +80,13 @@ export type InterviewRow = {
   summary: string | null;
   github_url: string | null;
   resume_label: string | null;
+  /** pending_assessment | completed */
+  assessment_status?: string | null;
+  assessment_deadline_at?: string | null;
+  applied_at?: string | null;
   answer_details?: QuestionAnswerDetail[] | null;
+  /** Full RubricEvaluation as stored JSON (reports / PDF). */
+  evaluation?: unknown;
   submitted_at: string | null;
   created_at: string;
   /** joined from jobs when fetched with job data */
@@ -90,6 +96,8 @@ export type InterviewRow = {
 export const APPLICANT_ASSESSMENT_KEY = "talent_applicant_assessment_v1";
 
 export type StoredAssessment = {
+  /** DB row created when the application form is submitted; ties Storage videos to this interview. */
+  interviewId: number;
   jobId: number;
   applicantId: number;
   applicantName: string;

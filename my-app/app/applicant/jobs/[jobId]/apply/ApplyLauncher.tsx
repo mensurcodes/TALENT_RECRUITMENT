@@ -58,13 +58,14 @@ export function ApplyLauncher({ job, applicant }: Props) {
       const res = await buildAssessmentFromApplyForm(fd);
       if ("error" in res) {
         if (res.error === "ALREADY_APPLIED") {
-          router.push(`/applicant/jobs/${job.id}/results`);
+          router.push(`/applicant/jobs/${job.id}`);
           return;
         }
         setError(res.error);
         return;
       }
       const stored: StoredAssessment = {
+        interviewId: res.interviewId,
         jobId: job.id,
         applicantId: applicant.id,
         applicantName: applicant.name,

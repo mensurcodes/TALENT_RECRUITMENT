@@ -2,14 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { RubricEvaluation, StoredAssessment } from "../../../types";
+import type {
+  QuestionAnswerDetail,
+  RubricEvaluation,
+  StoredAssessment,
+} from "../../../types";
 import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
 import { saveApplicationResult, fetchInterviewForJob } from "../../../actions";
+import { parseStoredEvaluation } from "../../../lib/evaluationParse";
+import { AssessmentVideoPlayback } from "./AssessmentVideoPlayback";
 
 type DisplayResult = {
   applicantName: string;
   jobTitle: string;
   companyName: string;
+  interviewId: number | null;
   evaluation: RubricEvaluation | null;
   submittedAt: string | null;
   resumeLabel: string;
@@ -62,6 +69,7 @@ export function ResultsClient({
   applicantId: number;
 }) {
   const [display, setDisplay] = useState<DisplayResult | null>(null);
+  const [questionDetails, setQuestionDetails] = useState<QuestionAnswerDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const savedRef = useRef(false);
 
@@ -75,10 +83,13 @@ export function ResultsClient({
           const s = JSON.parse(raw) as StoredAssessment;
           if (s.jobId === jobId && s.applicantId === applicantId && s.evaluation) {
             if (active) {
+              const details = Array.isArray(s.questionDetails) ? s.questionDetails : [];
+              setQuestionDetails(details);
               setDisplay({
                 applicantName: s.applicantName,
                 jobTitle: s.job.title,
                 companyName: s.job.company_name,
+                interviewId: s.interviewId ?? null,
                 evaluation: s.evaluation,
                 submittedAt: s.submittedAt,
                 resumeLabel: s.resumeUrl ?? "",
@@ -86,16 +97,19 @@ export function ResultsClient({
               });
               setLoading(false);
             }
-            if (!savedRef.current && s.evaluation) {
+            if (!savedRef.current && s.evaluation && s.interviewId) {
               savedRef.current = true;
               saveApplicationResult({
+                interviewId: s.interviewId,
                 jobId,
                 applicantId,
                 evaluation: s.evaluation,
                 resumeLabel: s.resumeUrl ?? "",
                 githubUrl: s.githubUrl ?? "",
                 questionDetails: Array.isArray(s.questionDetails) ? s.questionDetails : [],
-              }).catch(() => {});
+              }).catch((err) => {
+                console.error("saveApplicationResult failed:", err);
+              });
             }
             return;
           }
@@ -105,11 +119,14 @@ export function ResultsClient({
       try {
         const interview = await fetchInterviewForJob(applicantId, jobId);
         if (interview && active) {
-          setDisplay({
-            applicantName: interview.applicant_name,
-            jobTitle: interview.job?.title ?? `Job #${jobId}`,
-            companyName: interview.job?.company_name ?? "",
-            evaluation: interview.summary
+          const details = Array.isArray(interview.answer_details)
+            ? (interview.answer_details as QuestionAnswerDetail[])
+            : [];
+          setQuestionDetails(details);
+          const fromDb = parseStoredEvaluation(interview.evaluation);
+          const evaluation: RubricEvaluation | null = fromDb
+            ? fromDb
+            : interview.summary
               ? {
                   overallScore: interview.score ?? 0,
                   maxScore: interview.max_score ?? 100,
@@ -118,7 +135,13 @@ export function ResultsClient({
                   improvements: [],
                   rubricBreakdown: [],
                 }
-              : null,
+              : null;
+          setDisplay({
+            applicantName: interview.applicant_name,
+            jobTitle: interview.job?.title ?? `Job #${jobId}`,
+            companyName: interview.job?.company_name ?? "",
+            interviewId: interview.id,
+            evaluation,
             submittedAt: interview.submitted_at,
             resumeLabel: interview.resume_label ?? "",
             githubUrl: interview.github_url ?? "",
@@ -188,9 +211,19 @@ export function ResultsClient({
               </p>
             )}
           </div>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-800 ring-1 ring-blue-100/80">
-            Submitted
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            {display.interviewId && ev ? (
+              <a
+                href={`/api/applicant/assessment-report/${display.interviewId}`}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-800 shadow-sm transition-shadow hover:-translate-y-1 hover:shadow-md"
+              >
+                Download PDF report
+              </a>
+            ) : null}
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-800 ring-1 ring-blue-100/80">
+              Submitted
+            </span>
+          </div>
         </div>
       </div>
 
@@ -221,6 +254,61 @@ export function ResultsClient({
               </div>
             </div>
           </section>
+
+          {questionDetails.length > 0 && (
+            <section className="rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.03]">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Your answers</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Clips may be in Storage (<span className="font-mono">assessment-videos</span>), on disk (
+                <span className="font-mono">ASSESSMENT_VIDEO_LOCAL_DIR</span>), or embedded if the file was small.
+              </p>
+              <ul className="mt-5 space-y-8">
+                {questionDetails.map((d) => (
+                  <li key={d.questionId} className="border-b border-slate-100 pb-8 last:border-0 last:pb-0">
+                    <p className="text-sm font-medium text-slate-900">{d.prompt}</p>
+                    {d.writtenNotes?.trim() ? (
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">Notes: </span>
+                        {d.writtenNotes}
+                      </p>
+                    ) : null}
+                    {d.videoTranscript?.trim() ? (
+                      <p className="mt-2 text-sm text-slate-700">
+                        <span className="text-slate-500">Video transcript: </span>
+                        {d.videoTranscript}
+                      </p>
+                    ) : null}
+                    {d.videoObjectPath ? (
+                      <div className="mt-2">
+                        <p className="text-[11px] text-slate-500">
+                          Clip: <span className="font-mono text-slate-600">{d.videoObjectPath}</span>
+                        </p>
+                        {display.interviewId ? (
+                          <AssessmentVideoPlayback objectPath={d.videoObjectPath} interviewId={display.interviewId} />
+                        ) : (
+                          <p className="mt-2 text-xs text-amber-800">{d.videoObjectPath} (legacy path — re-run assessment to use interview-scoped storage.)</p>
+                        )}
+                      </div>
+                    ) : null}
+                    {!d.videoObjectPath && d.videoWebmBase64 ? (
+                      <video
+                        src={`data:video/webm;base64,${d.videoWebmBase64}`}
+                        controls
+                        playsInline
+                        className="mt-2 max-h-56 w-full max-w-lg rounded-lg border border-slate-200 bg-black/5"
+                      />
+                    ) : null}
+                    {d.hadVideoRecording &&
+                    !d.videoObjectPath &&
+                    !d.videoWebmBase64 &&
+                    d.videoSkippedReason ? (
+                      <p className="mt-2 text-xs text-amber-800">{d.videoSkippedReason}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <section className="rounded-2xl border border-slate-200/90 bg-white/90 p-6 shadow-sm ring-1 ring-slate-900/[0.03] transition-shadow duration-300 hover:shadow-md">

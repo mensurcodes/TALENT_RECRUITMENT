@@ -8,11 +8,13 @@ import { requireApplicantSession } from "../../lib/auth";
 
 type Props = {
   params: Promise<{ jobId: string }>;
+  searchParams: Promise<{ interview?: string }>;
 };
 
-export default async function ApplicantJobDetailPage({ params }: Props) {
+export default async function ApplicantJobDetailPage({ params, searchParams }: Props) {
   const applicantId = await requireApplicantSession();
   const { jobId: raw } = await params;
+  const { interview: interviewParam } = await searchParams;
   const jobId = Number(raw);
   if (!Number.isFinite(jobId)) redirect("/applicant/jobs");
 
@@ -39,6 +41,10 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
   }
 
   const alreadyApplied = existing !== null;
+  const pendingInterview =
+    existing && !existing.submitted_at && existing.assessment_status !== "completed";
+  const deadlineIso = existing?.assessment_deadline_at ?? null;
+  const deadlinePassed = deadlineIso ? new Date(deadlineIso).getTime() < Date.now() : false;
 
   return (
     <article className="mx-auto max-w-4xl space-y-10">
@@ -74,10 +80,40 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {alreadyApplied && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-white p-6 shadow-sm ring-1 ring-blue-500/5 transition-shadow duration-300 hover:shadow-md">
+      {interviewParam === "expired" ? (
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          The 7-day window to complete your interview for this role has passed. Contact the employer if you need a new
+          link.
+        </div>
+      ) : null}
+
+      {alreadyApplied && existing && (
+        <div className="flex flex-col gap-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-white p-6 shadow-sm ring-1 ring-blue-500/5 transition-shadow duration-300 hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-semibold text-slate-900">You&apos;ve already applied.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700/90">
+              Interview #{existing.id}
+            </p>
+            <p className="mt-1 font-semibold text-slate-900">Application received</p>
+            {existing.applied_at && (
+              <p className="mt-1 text-sm text-slate-600">
+                Applied{" "}
+                {new Date(existing.applied_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+            {deadlineIso && !deadlinePassed && (
+              <p className="mt-1 text-sm text-slate-600">
+                Complete interview by{" "}
+                {new Date(deadlineIso).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
             {existing.submitted_at && (
               <p className="mt-1 text-sm text-slate-600">
                 Submitted{" "}
@@ -95,12 +131,24 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
               </p>
             )}
           </div>
-          <Link
-            href={`/applicant/jobs/${job.id}/results`}
-            className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
-          >
-            View results
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {pendingInterview && !deadlinePassed ? (
+              <Link
+                href={`/applicant/jobs/${job.id}/assessment`}
+                className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
+              >
+                Continue interview
+              </Link>
+            ) : null}
+            {existing.submitted_at && existing.score !== null ? (
+              <Link
+                href={`/applicant/jobs/${job.id}/results`}
+                className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all duration-200 hover:shadow-lg"
+              >
+                View results
+              </Link>
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -130,7 +178,22 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
       </section>
 
       <div className="flex flex-wrap gap-3">
-        {alreadyApplied ? (
+        {alreadyApplied && existing && pendingInterview && !deadlinePassed ? (
+          <>
+            <Link
+              href={`/applicant/jobs/${job.id}/assessment`}
+              className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-xl"
+            >
+              Continue interview
+            </Link>
+            <Link
+              href="/applicant/jobs"
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
+            >
+              Back to jobs
+            </Link>
+          </>
+        ) : alreadyApplied && existing && existing.submitted_at ? (
           <>
             <Link
               href={`/applicant/jobs/${job.id}/results`}
@@ -145,6 +208,13 @@ export default async function ApplicantJobDetailPage({ params }: Props) {
               Back to jobs
             </Link>
           </>
+        ) : alreadyApplied ? (
+          <Link
+            href="/applicant/jobs"
+            className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
+          >
+            Back to jobs
+          </Link>
         ) : (
           <Link
             href={`/applicant/jobs/${job.id}/apply`}

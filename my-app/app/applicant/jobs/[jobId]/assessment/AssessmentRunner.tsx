@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { evaluateWithRubric, transcribeVideoAnswer, uploadAssessmentVideo } from "../../../actions";
+import {
+  evaluateWithRubric,
+  getInterviewIdForJob,
+  transcribeVideoAnswer,
+  uploadAssessmentVideo,
+} from "../../../actions";
 import { VideoAnswerRecorder } from "../../../components/VideoAnswerRecorder";
 import type { AssessmentQuestion, QuestionAnswerDetail, StoredAssessment } from "../../../types";
 import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
@@ -74,6 +79,19 @@ export function AssessmentRunner({
     }
     if (s.evaluation) {
       router.replace(`/applicant/jobs/${jobId}/results`);
+      return;
+    }
+    if (!s.interviewId) {
+      void getInterviewIdForJob(jobId).then((id) => {
+        if (!id) {
+          router.replace(`/applicant/jobs/${jobId}/apply`);
+          return;
+        }
+        const next: StoredAssessment = { ...s, interviewId: id };
+        saveStored(next);
+        setStored(next);
+        setHydrated(true);
+      });
       return;
     }
     setStored(s);
@@ -168,6 +186,7 @@ export function AssessmentRunner({
 
         const fdV = new FormData();
         fdV.append("jobId", String(jobId));
+        fdV.append("interviewId", String(stored.interviewId));
         fdV.append("questionId", current.id);
         fdV.append("video", blob, "answer.webm");
         const up = await uploadAssessmentVideo(fdV);
@@ -184,7 +203,7 @@ export function AssessmentRunner({
             }
           } else {
             videoSkippedReason =
-              "Video larger than inline limit — transcript saved. Add SUPABASE_SERVICE_ROLE_KEY and run storage_assessment_videos.sql to store full WebM files in Supabase Storage.";
+              "Video larger than inline limit — transcript saved. Set ASSESSMENT_VIDEO_LOCAL_DIR (save WebM on disk), or add SUPABASE_SERVICE_ROLE_KEY and run storage_assessment_videos.sql for cloud storage.";
           }
         }
       }

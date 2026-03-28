@@ -2,6 +2,7 @@ import Link from "next/link";
 import { fetchApplicant, fetchQualifiedJobs, fetchMyInterviews } from "../actions";
 import { hasSupabaseConfig } from "../lib/supabase";
 import { normalizeEmployment } from "../lib/employment";
+import { deriveWeakestPoints, parseStoredEvaluation } from "../lib/evaluationParse";
 import { JobCard } from "../components/JobCard";
 import { SupabaseNotice } from "../components/SupabaseNotice";
 import { requireApplicantSession } from "../lib/auth";
@@ -23,28 +24,37 @@ function ScorePill({ score, max }: { score: number | null; max: number | null })
   );
 }
 
-function ApplicationCard({ interview }: { interview: InterviewRow }) {
+function isInterviewComplete(i: InterviewRow): boolean {
+  return Boolean(i.submitted_at) && (i.assessment_status === "completed" || i.score != null);
+}
+
+function PendingInterviewCard({ interview }: { interview: InterviewRow }) {
   const title = interview.job?.title ?? `Job #${interview.job_id}`;
   const company = interview.job?.company_name ?? "";
-  const date = interview.submitted_at ?? interview.created_at;
+  const applied = interview.applied_at ?? interview.created_at;
+  const deadline = interview.assessment_deadline_at;
+  const deadlinePassed = deadline ? new Date(deadline).getTime() < Date.now() : false;
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-slate-200/90 bg-white/90 p-5 shadow-sm ring-1 ring-slate-900/[0.03] backdrop-blur-sm transition-all duration-300 hover:border-blue-200/60 hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
+    <article className="flex flex-col gap-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 p-5 shadow-sm ring-1 ring-amber-500/10 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
-            Submitted
+          <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-800 ring-1 ring-slate-200/90">
+            Interview #{interview.id}
           </span>
-          <ScorePill score={interview.score} max={interview.max_score} />
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200/80">
+            {deadlinePassed ? "Deadline passed" : "Action required"}
+          </span>
         </div>
         <p className="mt-2 text-base font-semibold tracking-tight text-slate-900">{title}</p>
         <p className="mt-0.5 text-sm text-slate-600">
           {company}
-          {date && (
+          {applied && (
             <>
               <span className="mx-2 text-slate-300">·</span>
               <span className="text-slate-500">
-                {new Date(date).toLocaleDateString("en-US", {
+                Applied{" "}
+                {new Date(applied).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -53,22 +63,120 @@ function ApplicationCard({ interview }: { interview: InterviewRow }) {
             </>
           )}
         </p>
-        {interview.summary && (
-          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500">{interview.summary}</p>
+        {deadline && !deadlinePassed && (
+          <p className="mt-1 text-[13px] text-amber-950/90">
+            Complete interview by{" "}
+            {new Date(deadline).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
         )}
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
-        <Link
-          href={`/applicant/jobs/${interview.job_id}/results`}
-          className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg"
-        >
-          Results
-        </Link>
+        {!deadlinePassed ? (
+          <Link
+            href={`/applicant/jobs/${interview.job_id}/assessment`}
+            className="rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-amber-500/25 transition-all duration-200 hover:shadow-lg"
+          >
+            Continue interview
+          </Link>
+        ) : (
+          <Link
+            href={`/applicant/jobs/${interview.job_id}/apply`}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Application details
+          </Link>
+        )}
         <Link
           href={`/applicant/jobs/${interview.job_id}`}
           className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition-all duration-200 hover:bg-slate-50"
         >
-          Job
+          Role
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function PastApplicationCard({ interview }: { interview: InterviewRow }) {
+  const title = interview.job?.title ?? `Job #${interview.job_id}`;
+  const company = interview.job?.company_name ?? "";
+  const ev = parseStoredEvaluation(interview.evaluation);
+  const weakest = ev ? deriveWeakestPoints(ev) : [];
+  const canPdf = Boolean(ev);
+
+  return (
+    <article className="flex flex-col gap-4 rounded-2xl border border-slate-200/90 bg-white/90 p-5 shadow-sm ring-1 ring-slate-900/[0.03] backdrop-blur-sm sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-800 ring-1 ring-slate-200/90">
+            Interview #{interview.id}
+          </span>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-900 ring-1 ring-emerald-200/80">
+            Completed
+          </span>
+          {interview.score !== null ? <ScorePill score={interview.score} max={interview.max_score} /> : null}
+        </div>
+        <p className="mt-2 text-base font-semibold tracking-tight text-slate-900">{title}</p>
+        <p className="mt-0.5 text-sm text-slate-600">{company}</p>
+        {interview.submitted_at && (
+          <p className="mt-1 text-[13px] text-slate-500">
+            Submitted{" "}
+            {new Date(interview.submitted_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
+        )}
+        {ev ? (
+          <p className="mt-3 line-clamp-3 text-[13px] leading-relaxed text-slate-700">{ev.summary}</p>
+        ) : interview.summary ? (
+          <p className="mt-3 line-clamp-3 text-[13px] leading-relaxed text-slate-700">{interview.summary}</p>
+        ) : null}
+        {weakest.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-rose-100/90 bg-rose-50/50 px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700/90">Weakest areas</p>
+            <ul className="mt-3 space-y-2">
+              {weakest.slice(0, 3).map((w) => (
+                <li key={w} className="flex gap-2 text-[13px] text-rose-950/90">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+                  {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {!ev && interview.summary && (
+          <p className="mt-2 text-xs text-slate-500">
+            Full rubric breakdown is available after you re-save results from a recent session, or re-run the assessment
+            with the latest app version.
+          </p>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+        <Link
+          href={`/applicant/jobs/${interview.job_id}/results`}
+          className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-2 text-center text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-200 hover:shadow-lg"
+        >
+          View full report
+        </Link>
+        {canPdf ? (
+          <a
+            href={`/api/applicant/assessment-report/${interview.id}`}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-semibold text-slate-800 shadow-sm transition-all hover:bg-slate-50"
+          >
+            Download PDF
+          </a>
+        ) : null}
+        <Link
+          href={`/applicant/jobs/${interview.job_id}`}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Role
         </Link>
       </div>
     </article>
@@ -111,7 +219,9 @@ export default async function ApplicantJobsPage() {
 
   const appliedJobIds = new Set(interviews.map((i) => i.job_id));
   const openJobs = jobs.filter((j) => !appliedJobIds.has(j.id));
-  const appliedJobs = jobs.filter((j) => appliedJobIds.has(j.id));
+
+  const completed = interviews.filter(isInterviewComplete);
+  const pending = interviews.filter((i) => !isInterviewComplete(i));
 
   return (
     <div className="space-y-14">
@@ -119,7 +229,7 @@ export default async function ApplicantJobsPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-600/90">Your pipeline</p>
         <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-4xl">Opportunities</h1>
+            <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-4xl">Applicant portal</h1>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">
               <span className="font-medium text-slate-900">{applicant.name}</span>
               <span className="mx-2 text-slate-300">·</span>
@@ -130,46 +240,35 @@ export default async function ApplicantJobsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full bg-blue-50 px-4 py-2 text-[13px] font-medium text-blue-800 ring-1 ring-blue-100/80">
-              {interviews.length} application{interviews.length !== 1 ? "s" : ""}
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700">
               {openJobs.length} open
+            </span>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-[13px] font-medium text-amber-900">
+              {pending.length} pending
+            </span>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-[13px] font-medium text-emerald-900">
+              {completed.length} past
             </span>
           </div>
         </div>
       </div>
 
-      {interviews.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-slate-500">Applications</h2>
-          <ul className="applicant-stagger space-y-3">
-            {interviews.map((interview) => (
-              <li key={interview.id}>
-                <ApplicationCard interview={interview} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-slate-500">Open roles</h2>
-          {appliedJobs.length > 0 && (
-            <span className="text-xs text-slate-500">{appliedJobs.length} already applied</span>
-          )}
+        <div>
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available positions</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Roles that match your profile and you haven&apos;t applied to yet.
+          </p>
         </div>
-
         {openJobs.length === 0 && jobs.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-12 text-center text-sm text-slate-600">
             No roles match your profile yet.
           </div>
         ) : openJobs.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white/80 p-12 text-center text-sm text-slate-600">
-            You&apos;ve applied to all matched roles.
+            You&apos;ve applied to all matched roles. See pending or past applications below.
           </div>
         ) : (
-          <ul className="applicant-stagger grid gap-5 md:grid-cols-2">
+          <ul className="applicant-stagger grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {openJobs.map((job) => (
               <li key={job.id} className="min-h-[260px]">
                 <JobCard job={job} />
@@ -177,23 +276,52 @@ export default async function ApplicantJobsPage() {
             ))}
           </ul>
         )}
+      </section>
 
-        {appliedJobs.length > 0 && (
-          <details className="group pt-2">
-            <summary className="cursor-pointer text-sm font-medium text-blue-600 transition-colors hover:text-blue-700">
-              Previously applied ({appliedJobs.length})
-            </summary>
-            <ul className="applicant-stagger mt-5 grid gap-5 md:grid-cols-2">
-              {appliedJobs.map((job) => {
-                const match = interviews.find((i) => i.job_id === job.id);
-                return (
-                  <li key={job.id} className="min-h-[260px]">
-                    <JobCard job={job} appliedInterviewId={match?.id} />
-                  </li>
-                );
-              })}
-            </ul>
-          </details>
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-amber-700/90">
+            Pending — complete your interview
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            You&apos;ve applied; finish the timed assessment within 7 days of applying. Videos attach to your interview
+            ID in <span className="font-mono text-slate-700">assessment-videos</span>.
+          </p>
+        </div>
+        {pending.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center text-sm text-slate-600">
+            No pending interviews.
+          </div>
+        ) : (
+          <ul className="applicant-stagger space-y-3">
+            {pending.map((interview) => (
+              <li key={interview.id}>
+                <PendingInterviewCard interview={interview} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-emerald-700/90">Past applications</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Summary, focus areas (weakest points), and a PDF export that matches the recruiter-facing report structure.
+          </p>
+        </div>
+        {completed.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center text-sm text-slate-600">
+            No completed assessments yet.
+          </div>
+        ) : (
+          <ul className="applicant-stagger space-y-3">
+            {completed.map((interview) => (
+              <li key={interview.id}>
+                <PastApplicationCard interview={interview} />
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>

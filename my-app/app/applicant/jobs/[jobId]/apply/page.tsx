@@ -42,7 +42,13 @@ export default async function ApplyPage({ params, searchParams }: Props) {
   }
 
   if (existing) {
-    redirect(`/applicant/jobs/${jobId}/results`);
+    const done =
+      Boolean(existing.submitted_at) ||
+      existing.assessment_status === "completed" ||
+      (existing.score != null && existing.summary);
+    if (done) {
+      redirect(`/applicant/jobs/${jobId}/results`);
+    }
   }
 
   return (

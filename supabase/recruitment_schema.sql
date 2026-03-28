@@ -62,10 +62,21 @@ create table public.interviews (
   summary text,
   github_url text,
   resume_label text,
+  /** pending_assessment | completed */
+  assessment_status text not null default 'pending_assessment',
+  /** Complete the timed assessment by this time (typically applied_at + 7 days). */
+  assessment_deadline_at timestamptz,
+  applied_at timestamptz default now(),
   /** Per-question prompts, notes, video transcript, optional inline video (see app types). */
   answer_details jsonb,
-  submitted_at timestamptz default now(),
+  /** Full RubricEvaluation JSON for reports & PDF export. */
+  evaluation jsonb,
+  submitted_at timestamptz,
   created_at timestamptz default now()
 );
+
+create unique index interviews_applicant_job_unique
+  on public.interviews (applicant_id, job_id)
+  where applicant_id is not null;
 
 -- Optional: turn on RLS later in Dashboard when you add real auth.

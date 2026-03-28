@@ -9,6 +9,11 @@ import {
   getSupabaseAdmin,
   hasSupabaseServiceRole,
 } from "./lib/supabaseAdmin";
+import {
+  getLocalAssessmentVideoRoot,
+  localAssessmentVideoExists,
+  saveLocalAssessmentVideo,
+} from "./lib/localAssessmentVideos";
 import { fetchGithubContext, githubRepoUrlHint } from "./lib/github";
 import { fetchResumeExcerpt } from "./lib/resume";
 import { jobMatchesApplicant, normalizeEmployment } from "./lib/employment";
@@ -178,10 +183,43 @@ function mockEvaluation(
   };
 }
 
+const INTERVIEW_LIST_COLUMNS =
+  "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,assessment_status,assessment_deadline_at,applied_at,answer_details,evaluation,submitted_at,created_at";
+
+async function verifyInterviewOwnership(
+  applicantId: number,
+  interviewId: number,
+  jobId: number,
+): Promise<boolean> {
+  if (!hasSupabaseConfig()) return false;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .select("id")
+    .eq("id", interviewId)
+    .eq("applicant_id", applicantId)
+    .eq("job_id", jobId)
+    .maybeSingle();
+  if (error || !data) return false;
+  return true;
+}
+
+async function verifyInterviewIdForApplicant(applicantId: number, interviewId: number): Promise<boolean> {
+  if (!hasSupabaseConfig()) return false;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("interviews")
+    .select("id")
+    .eq("id", interviewId)
+    .eq("applicant_id", applicantId)
+    .maybeSingle();
+  return !error && !!data;
+}
+
 export async function buildAssessmentFromApplyForm(
   formData: FormData,
 ): Promise<
-  | { job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment; resumeLabel: string }
+  | { job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment; resumeLabel: string; interviewId: number }
   | { error: string }
 > {
   if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
@@ -211,9 +249,21 @@ export async function buildAssessmentFromApplyForm(
     return { error: "This job does not match your employment preference." };
   }
 
-  const alreadyApplied = await checkExistingApplication(sessionId, jobId);
-  if (alreadyApplied) {
-    return { error: "ALREADY_APPLIED" };
+  const existingApp = await checkExistingApplication(sessionId, jobId);
+  if (existingApp) {
+    const finished =
+      Boolean(existingApp.submitted_at) ||
+      existingApp.assessment_status === "completed" ||
+      (existingApp.score != null && existingApp.summary);
+    if (finished) {
+      return { error: "ALREADY_APPLIED" };
+    }
+    if (existingApp.assessment_deadline_at) {
+      const end = new Date(existingApp.assessment_deadline_at).getTime();
+      if (end < Date.now()) {
+        return { error: "The 7-day interview window for this application has passed." };
+      }
+    }
   }
 
   const resumeFile = formData.get("resumePdf");
@@ -318,7 +368,49 @@ GitHub / codebase digest:\n${codebaseDigest.slice(0, 16_000)}`;
     questions,
   };
 
-  return { job, applicant, generated, resumeLabel };
+  const sb = getSupabase();
+
+  if (existingApp && !existingApp.submitted_at) {
+    const { error: upErr } = await sb
+      .from("interviews")
+      .update({
+        github_url: githubUrl.trim(),
+        resume_label: resumeLabel,
+      })
+      .eq("id", existingApp.id)
+      .eq("applicant_id", applicant.id);
+    if (upErr) return { error: upErr.message };
+    return { job, applicant, generated, resumeLabel, interviewId: existingApp.id };
+  }
+
+  const deadline = new Date();
+  deadline.setUTCDate(deadline.getUTCDate() + 7);
+
+  const { data: inserted, error: insertError } = await sb
+    .from("interviews")
+    .insert({
+      job_id: job.id,
+      applicant_id: applicant.id,
+      applicant_name: applicant.name,
+      recruiter_name: job.recruiter_name,
+      github_url: githubUrl.trim(),
+      resume_label: resumeLabel,
+      assessment_status: "pending_assessment",
+      assessment_deadline_at: deadline.toISOString(),
+      applied_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted) {
+    const code = (insertError as { code?: string } | null)?.code;
+    if (code === "23505") {
+      return { error: "ALREADY_APPLIED" };
+    }
+    return { error: insertError?.message ?? "Could not record your application." };
+  }
+
+  return { job, applicant, generated, resumeLabel, interviewId: (inserted as { id: number }).id };
 }
 
 export async function transcribeVideoAnswer(
@@ -353,73 +445,121 @@ export async function transcribeVideoAnswer(
 
 const MAX_ASSESSMENT_VIDEO_BYTES = 15 * 1024 * 1024;
 
-/** Upload one answer clip to private Supabase Storage (requires service role on server). */
+/**
+ * Upload one answer clip to Supabase Storage (service role) and/or a local directory
+ * (see ASSESSMENT_VIDEO_LOCAL_DIR). Succeeds if at least one target works.
+ */
 export async function uploadAssessmentVideo(
   formData: FormData,
 ): Promise<{ objectPath: string } | { error: string }> {
-  if (!hasSupabaseServiceRole()) {
+  const localRoot = getLocalAssessmentVideoRoot();
+  const useSupabase = hasSupabaseServiceRole();
+  if (!useSupabase && !localRoot) {
     return { error: "STORAGE_NOT_CONFIGURED" };
   }
   const applicantId = await getApplicantSessionId();
   if (!applicantId) return { error: "Sign in required." };
 
   const jobId = Number(formData.get("jobId"));
+  const interviewId = Number(formData.get("interviewId"));
   const questionId = String(formData.get("questionId") ?? "").trim();
   const file = formData.get("video");
 
   if (!Number.isFinite(jobId) || jobId <= 0) return { error: "Invalid job." };
+  if (!Number.isFinite(interviewId) || interviewId <= 0) return { error: "Invalid interview." };
   if (!questionId) return { error: "Invalid question." };
   if (!(file instanceof Blob) || file.size === 0) return { error: "No video file." };
   if (file.size > MAX_ASSESSMENT_VIDEO_BYTES) {
     return { error: "Video exceeds 15MB limit." };
   }
 
-  const safeQ = questionId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
-  const objectPath = `${applicantId}/${jobId}/${Date.now()}_${safeQ}.webm`;
+  const owns = await verifyInterviewOwnership(applicantId, interviewId, jobId);
+  if (!owns) return { error: "Invalid interview." };
 
-  try {
-    const admin = getSupabaseAdmin();
-    const buf = Buffer.from(await file.arrayBuffer());
-    const { error } = await admin.storage.from(ASSESSMENT_VIDEOS_BUCKET).upload(objectPath, buf, {
-      contentType: file.type || "video/webm",
-      upsert: false,
-    });
-    if (error) return { error: error.message };
-    return { objectPath };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Upload failed";
-    return { error: msg };
+  const safeQ = questionId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
+  const objectPath = `${interviewId}/${Date.now()}_${safeQ}.webm`;
+  const buf = Buffer.from(await file.arrayBuffer());
+
+  let savedLocal = false;
+  let savedRemote = false;
+  let lastError = "";
+
+  if (localRoot) {
+    try {
+      await saveLocalAssessmentVideo(localRoot, objectPath, buf);
+      savedLocal = true;
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Local save failed";
+    }
   }
+
+  if (useSupabase) {
+    try {
+      const admin = getSupabaseAdmin();
+      const { error } = await admin.storage.from(ASSESSMENT_VIDEOS_BUCKET).upload(objectPath, buf, {
+        contentType: file.type || "video/webm",
+        upsert: false,
+      });
+      if (error) {
+        lastError = error.message;
+      } else {
+        savedRemote = true;
+      }
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Upload failed";
+    }
+  }
+
+  if (savedLocal || savedRemote) {
+    return { objectPath };
+  }
+  return {
+    error:
+      lastError ||
+      "Could not save video. Set ASSESSMENT_VIDEO_LOCAL_DIR and/or fix Supabase Storage.",
+  };
 }
 
 /**
  * Short-lived signed URL so the signed-in applicant can play back their own clip.
- * objectPath must match `{applicantId}/{jobId}/...`.
+ * objectPath must match `{interviewId}/...`.
  */
 export async function getAssessmentVideoSignedUrl(
   objectPath: string,
-  jobId: number,
+  interviewId: number,
 ): Promise<{ url: string } | { error: string }> {
-  if (!hasSupabaseServiceRole()) return { error: "Storage not configured." };
   const applicantId = await getApplicantSessionId();
   if (!applicantId) return { error: "Sign in required." };
 
-  const prefix = `${applicantId}/${jobId}/`;
+  const prefix = `${interviewId}/`;
   if (!objectPath.startsWith(prefix) || objectPath.includes("..")) {
     return { error: "Invalid path." };
   }
 
-  try {
-    const admin = getSupabaseAdmin();
-    const { data, error } = await admin.storage
-      .from(ASSESSMENT_VIDEOS_BUCKET)
-      .createSignedUrl(objectPath, 3600);
-    if (error || !data?.signedUrl) return { error: error?.message ?? "Could not sign URL." };
-    return { url: data.signedUrl };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Failed";
-    return { error: msg };
+  const owns = await verifyInterviewIdForApplicant(applicantId, interviewId);
+  if (!owns) return { error: "Invalid interview." };
+
+  if (hasSupabaseServiceRole()) {
+    try {
+      const admin = getSupabaseAdmin();
+      const { data, error } = await admin.storage
+        .from(ASSESSMENT_VIDEOS_BUCKET)
+        .createSignedUrl(objectPath, 3600);
+      if (!error && data?.signedUrl) {
+        return { url: data.signedUrl };
+      }
+    } catch {
+      /* try local */
+    }
   }
+
+  const localRoot = getLocalAssessmentVideoRoot();
+  if (localRoot && (await localAssessmentVideoExists(localRoot, objectPath))) {
+    const q = new URLSearchParams({ interviewId: String(interviewId), path: objectPath });
+    return { url: `/api/applicant/assessment-video/local?${q.toString()}` };
+  }
+
+  return { error: "Storage not configured." };
 }
 
 export async function evaluateWithRubric(input: {
@@ -490,9 +630,7 @@ export async function checkExistingApplication(
   const sb = getSupabase();
   const { data, error } = await sb
     .from("interviews")
-    .select(
-      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at",
-    )
+    .select(INTERVIEW_LIST_COLUMNS)
     .eq("applicant_id", applicantId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
@@ -502,13 +640,20 @@ export async function checkExistingApplication(
   return data as InterviewRow;
 }
 
+export async function getInterviewIdForJob(jobId: number): Promise<number | null> {
+  const applicantId = await getApplicantSessionId();
+  if (!applicantId) return null;
+  const row = await checkExistingApplication(applicantId, jobId);
+  return row?.id ?? null;
+}
+
 export async function fetchMyInterviews(applicantId: number): Promise<InterviewRow[]> {
   if (!hasSupabaseConfig()) return [];
   const sb = getSupabase();
   const { data, error } = await sb
     .from("interviews")
     .select(
-      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at,jobs(title,company_name,employment_type)",
+      `${INTERVIEW_LIST_COLUMNS},jobs(title,company_name,employment_type)`,
     )
     .eq("applicant_id", applicantId)
     .order("created_at", { ascending: false });
@@ -521,6 +666,7 @@ export async function fetchMyInterviews(applicantId: number): Promise<InterviewR
 }
 
 export async function saveApplicationResult(input: {
+  interviewId: number;
   jobId: number;
   applicantId: number;
   evaluation: RubricEvaluation;
@@ -532,37 +678,33 @@ export async function saveApplicationResult(input: {
   const sessionId = await getApplicantSessionId();
   if (!sessionId || sessionId !== input.applicantId) return { error: "Unauthorized." };
 
-  const [job, applicant] = await Promise.all([
-    fetchJob(input.jobId),
-    fetchApplicant(input.applicantId),
-  ]);
-  if (!job || !applicant) return { error: "Job or applicant not found." };
-
-  // upsert: only insert once per applicant + job
-  const existing = await checkExistingApplication(input.applicantId, input.jobId);
-  if (existing) return { ok: true, interviewId: existing.id };
+  const owns = await verifyInterviewOwnership(input.applicantId, input.interviewId, input.jobId);
+  if (!owns) return { error: "Interview not found." };
 
   const sb = getSupabase();
-  const { data, error } = await sb
+  const submittedAt = new Date().toISOString();
+  const resultStr = `${input.evaluation.overallScore}/${input.evaluation.maxScore}`;
+  const rowPayload = {
+    result: resultStr,
+    score: input.evaluation.overallScore,
+    max_score: input.evaluation.maxScore,
+    summary: input.evaluation.summary,
+    github_url: input.githubUrl,
+    resume_label: input.resumeLabel,
+    answer_details: input.questionDetails,
+    evaluation: input.evaluation,
+    submitted_at: submittedAt,
+    assessment_status: "completed",
+  };
+
+  const { error } = await sb
     .from("interviews")
-    .insert({
-      job_id: input.jobId,
-      applicant_id: input.applicantId,
-      applicant_name: applicant.name,
-      recruiter_name: job.recruiter_name,
-      result: `${input.evaluation.overallScore}/${input.evaluation.maxScore}`,
-      score: input.evaluation.overallScore,
-      max_score: input.evaluation.maxScore,
-      summary: input.evaluation.summary,
-      github_url: input.githubUrl,
-      resume_label: input.resumeLabel,
-      answer_details: input.questionDetails,
-      submitted_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-  if (error || !data) return { error: error?.message ?? "Failed to save." };
-  return { ok: true, interviewId: (data as { id: number }).id };
+    .update(rowPayload)
+    .eq("id", input.interviewId)
+    .eq("applicant_id", input.applicantId)
+    .eq("job_id", input.jobId);
+  if (error) return { error: error.message };
+  return { ok: true, interviewId: input.interviewId };
 }
 
 export async function fetchInterviewForJob(
@@ -573,9 +715,7 @@ export async function fetchInterviewForJob(
   const sb = getSupabase();
   const { data, error } = await sb
     .from("interviews")
-    .select(
-      "id,job_id,applicant_id,applicant_name,recruiter_name,score,max_score,summary,github_url,resume_label,answer_details,submitted_at,created_at,jobs(title,company_name,employment_type)",
-    )
+    .select(`${INTERVIEW_LIST_COLUMNS},jobs(title,company_name,employment_type)`)
     .eq("applicant_id", applicantId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
