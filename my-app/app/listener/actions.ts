@@ -1,0 +1,282 @@
+"use server";
+
+import { getSupabase, hasSupabaseConfig } from "./lib/supabase";
+import { fetchGithubContext } from "./lib/github";
+import { fetchResumeExcerpt } from "./lib/resume";
+import { jobMatchesApplicant, normalizeEmployment } from "./lib/employment";
+import type {
+  ApplicantRow,
+  AssessmentQuestion,
+  GeneratedAssessment,
+  JobRow,
+  RubricEvaluation,
+} from "./types";
+
+async function openaiJson<T>(system: string, user: string): Promise<T | null> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchApplicantSummaries(): Promise<
+  Pick<ApplicantRow, "id" | "name" | "email">[]
+> {
+  if (!hasSupabaseConfig()) return [];
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("applicants")
+    .select("id,name,email")
+    .order("id", { ascending: true })
+    .limit(200);
+  if (error || !data) return [];
+  return data as Pick<ApplicantRow, "id" | "name" | "email">[];
+}
+
+export async function fetchApplicant(applicantId: number): Promise<ApplicantRow | null> {
+  if (!hasSupabaseConfig()) return null;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("applicants")
+    .select("id,name,email,username,employment_type,resume_url,github_url")
+    .eq("id", applicantId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as ApplicantRow;
+}
+
+export async function fetchQualifiedJobs(applicantId: number): Promise<JobRow[]> {
+  if (!hasSupabaseConfig()) return [];
+  const applicant = await fetchApplicant(applicantId);
+  if (!applicant) return [];
+  const bucket = normalizeEmployment(applicant.employment_type);
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("jobs")
+    .select(
+      "id,recruiter_id,recruiter_name,title,company_name,employment_type,description,us_work_auth,grading_rubric",
+    )
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return (data as JobRow[]).filter((j) => jobMatchesApplicant(j.employment_type, bucket));
+}
+
+export async function fetchJob(jobId: number): Promise<JobRow | null> {
+  if (!hasSupabaseConfig()) return null;
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("jobs")
+    .select(
+      "id,recruiter_id,recruiter_name,title,company_name,employment_type,description,us_work_auth,grading_rubric",
+    )
+    .eq("id", jobId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as JobRow;
+}
+
+function mockQuestions(job: JobRow): AssessmentQuestion[] {
+  const title = job.title;
+  const company = job.company_name;
+  return [
+    {
+      id: "q1",
+      prompt: `For "${title}" at ${company}: describe a concrete project from your background (resume or GitHub) that proves you can own a feature end-to-end. What was ambiguous and how did you resolve it?`,
+      prepSeconds: 60,
+      answerSeconds: 300,
+    },
+    {
+      id: "q2",
+      prompt: `Given your repository’s stated stack and README themes, what is one reliability or security risk you would address before shipping to users, and what change would you make?`,
+      prepSeconds: 60,
+      answerSeconds: 300,
+    },
+    {
+      id: "q3",
+      prompt: `The role emphasizes collaboration. Tell us about a time you improved code review or documentation in a team setting, referencing specifics from your experience.`,
+      prepSeconds: 60,
+      answerSeconds: 300,
+    },
+  ];
+}
+
+function mockEvaluation(
+  job: JobRow,
+  questions: AssessmentQuestion[],
+  answers: Record<string, string>,
+): RubricEvaluation {
+  const answered = questions.filter((q) => (answers[q.id] ?? "").trim().length > 8).length;
+  const base = Math.min(100, 55 + answered * 12);
+  return {
+    overallScore: base,
+    maxScore: 100,
+    summary:
+      "Demo mode (no OPENAI_API_KEY): heuristic score from answer completeness. Add your API key for rubric-aligned scoring.",
+    strengths: [
+      answered >= 2 ? "Multiple substantive responses recorded." : "Assessment completed.",
+      job.grading_rubric ? "Recruiter rubric was present for future AI grading." : "",
+    ].filter(Boolean),
+    improvements: [
+      "Set OPENAI_API_KEY to grade against the recruiter rubric and resume/GitHub context.",
+    ],
+    rubricBreakdown: [
+      {
+        criterion: "Completeness",
+        score: answered,
+        max: questions.length,
+        note: "Number of questions with non-trivial answers.",
+      },
+    ],
+  };
+}
+
+export async function buildAssessmentPayload(
+  jobId: number,
+  applicantId: number,
+  resumeUrl: string,
+  githubUrl: string,
+): Promise<{ job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment } | { error: string }> {
+  if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
+  const [job, applicant] = await Promise.all([fetchJob(jobId), fetchApplicant(applicantId)]);
+  if (!job) return { error: "Job not found." };
+  if (!applicant) return { error: "Applicant not found." };
+  if (!jobMatchesApplicant(job.employment_type, normalizeEmployment(applicant.employment_type))) {
+    return { error: "This job does not match your employment preference." };
+  }
+
+  const [resumeText, gh] = await Promise.all([
+    fetchResumeExcerpt(resumeUrl),
+    fetchGithubContext(githubUrl),
+  ]);
+
+  const resumeDigest = resumeText.slice(0, 8000);
+  const codebaseDigest = gh
+    ? [
+        `Repo: ${gh.owner}/${gh.repo}`,
+        gh.description ? `Description: ${gh.description}` : "",
+        gh.language ? `Primary language: ${gh.language}` : "",
+        gh.topics.length ? `Topics: ${gh.topics.join(", ")}` : "",
+        gh.readmeExcerpt ? `README excerpt:\n${gh.readmeExcerpt.slice(0, 4000)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "[GitHub context unavailable — verify URL is a public github.com repo or add GITHUB_TOKEN.]";
+
+  const system = `You are an expert hiring assessor. Output strict JSON only.
+Schema:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "string",
+      "prepSeconds": 60,
+      "answerSeconds": 300
+    }
+  ]
+}
+Rules:
+- 3 to 5 questions.
+- Questions MUST reference specifics inferred from resume excerpt and GitHub context (skills, projects, languages). If data is thin, say so in the question and still tie to role.
+- prepSeconds always 60. answerSeconds always 300 unless role needs longer (max 420).
+- No boilerplate "tell me about yourself". Make them technical/behavioral hybrids like HackerRank written assessments.`;
+
+  const user = `Job title: ${job.title}
+Company: ${job.company_name}
+Employment: ${job.employment_type ?? "unspecified"}
+Job description:\n${(job.description ?? "").slice(0, 6000)}
+
+Resume excerpt:\n${resumeDigest}
+
+GitHub / codebase context:\n${codebaseDigest.slice(0, 6000)}`;
+
+  const parsed = await openaiJson<{ questions: AssessmentQuestion[] }>(system, user);
+  let questions: AssessmentQuestion[] =
+    parsed?.questions?.filter((q) => q.id && q.prompt)?.map((q) => ({
+      id: String(q.id),
+      prompt: String(q.prompt),
+      prepSeconds: Number(q.prepSeconds) > 0 ? Number(q.prepSeconds) : 60,
+      answerSeconds: Number(q.answerSeconds) > 0 ? Number(q.answerSeconds) : 300,
+    })) ?? [];
+
+  if (questions.length < 3) {
+    questions = mockQuestions(job);
+  }
+
+  const generated: GeneratedAssessment = {
+    resumeDigest,
+    codebaseDigest,
+    questions,
+  };
+
+  return { job, applicant, generated };
+}
+
+export async function evaluateWithRubric(input: {
+  job: JobRow;
+  generated: GeneratedAssessment;
+  answers: Record<string, string>;
+}): Promise<RubricEvaluation> {
+  const { job, generated, answers } = input;
+  const rubric = (job.grading_rubric ?? "").trim() || "General: communication, technical depth, relevance, structure.";
+  const qa = generated.questions
+    .map((q) => `Q (${q.id}): ${q.prompt}\nA: ${answers[q.id] ?? ""}`)
+    .join("\n\n");
+
+  const system = `You are a senior hiring manager. Score the candidate using the recruiter rubric.
+Return strict JSON:
+{
+  "overallScore": number,
+  "maxScore": 100,
+  "summary": string,
+  "strengths": string[],
+  "improvements": string[],
+  "rubricBreakdown": [{ "criterion": string, "score": number, "max": number, "note": string }]
+}
+Be candid, actionable, and reference rubric criteria by name when possible.`;
+
+  const user = `Rubric:\n${rubric}\n\nJob: ${job.title} at ${job.company_name}\nDescription:\n${(job.description ?? "").slice(0, 4000)}\n\nResume digest:\n${generated.resumeDigest.slice(0, 2500)}\n\nCodebase digest:\n${generated.codebaseDigest.slice(0, 2500)}\n\nInterview answers:\n${qa}`;
+
+  const out = await openaiJson<RubricEvaluation>(system, user);
+  if (
+    out &&
+    typeof out.overallScore === "number" &&
+    Array.isArray(out.strengths) &&
+    Array.isArray(out.improvements)
+  ) {
+    return {
+      overallScore: Math.max(0, Math.min(100, out.overallScore)),
+      maxScore: typeof out.maxScore === "number" ? out.maxScore : 100,
+      summary: out.summary,
+      strengths: out.strengths,
+      improvements: out.improvements,
+      rubricBreakdown: Array.isArray(out.rubricBreakdown) ? out.rubricBreakdown : [],
+    };
+  }
+
+  return mockEvaluation(job, generated.questions, answers);
+}
