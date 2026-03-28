@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { buildAssessmentPayload } from "../../../actions";
 import type { ApplicantRow, JobRow } from "../../../types";
-import { LISTENER_ASSESSMENT_KEY, type StoredAssessment } from "../../../types";
+import { APPLICANT_ASSESSMENT_KEY, type StoredAssessment } from "../../../types";
 
 type Props = {
   job: JobRow;
@@ -20,8 +20,8 @@ export function ApplyLauncher({ job, applicant }: Props) {
 
   function persistAndGo(payload: StoredAssessment) {
     if (typeof window === "undefined") return;
-    sessionStorage.setItem(LISTENER_ASSESSMENT_KEY, JSON.stringify(payload));
-    router.push(`/listener/jobs/${job.id}/assessment`);
+    sessionStorage.setItem(APPLICANT_ASSESSMENT_KEY, JSON.stringify(payload));
+    router.push(`/applicant/jobs/${job.id}/assessment`);
   }
 
   function onSubmit(e: React.FormEvent) {

@@ -5,12 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { evaluateWithRubric, transcribeVideoAnswer } from "../../../actions";
 import { VideoAnswerRecorder } from "../../../components/VideoAnswerRecorder";
 import type { AssessmentQuestion, StoredAssessment } from "../../../types";
-import { LISTENER_ASSESSMENT_KEY } from "../../../types";
+import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
 
 function loadStored(): StoredAssessment | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(LISTENER_ASSESSMENT_KEY);
+    const raw = sessionStorage.getItem(APPLICANT_ASSESSMENT_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as StoredAssessment;
   } catch {
@@ -19,7 +19,7 @@ function loadStored(): StoredAssessment | null {
 }
 
 function saveStored(s: StoredAssessment) {
-  sessionStorage.setItem(LISTENER_ASSESSMENT_KEY, JSON.stringify(s));
+  sessionStorage.setItem(APPLICANT_ASSESSMENT_KEY, JSON.stringify(s));
 }
 
 export function AssessmentRunner({
@@ -50,7 +50,7 @@ export function AssessmentRunner({
   useEffect(() => {
     const s = loadStored();
     if (!s || s.jobId !== jobId || s.applicantId !== applicantId) {
-      router.replace(`/listener/jobs/${jobId}/apply`);
+      router.replace(`/applicant/jobs/${jobId}/apply`);
       return;
     }
     setStored(s);
@@ -104,7 +104,7 @@ export function AssessmentRunner({
       saveStored(final);
       setStored(final);
       setBusy(false);
-      router.replace(`/listener/jobs/${jobId}/results`);
+      router.replace(`/applicant/jobs/${jobId}/results`);
     },
     [applicantId, jobId, router, stored],
   );

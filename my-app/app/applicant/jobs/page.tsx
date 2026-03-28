@@ -4,16 +4,16 @@ import { hasSupabaseConfig } from "../lib/supabase";
 import { normalizeEmployment } from "../lib/employment";
 import { JobCard } from "../components/JobCard";
 import { SupabaseNotice } from "../components/SupabaseNotice";
-import { requireListenerApplicantId } from "../lib/auth";
+import { requireApplicantSession } from "../lib/auth";
 
-export default async function ListenerJobsPage() {
-  const applicantId = await requireListenerApplicantId();
+export default async function ApplicantJobsPage() {
+  const applicantId = await requireApplicantSession();
 
   if (!hasSupabaseConfig()) {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/listener" className="text-sm text-cyan-400 hover:text-cyan-300">
+        <Link href="/applicant" className="text-sm text-cyan-400 hover:text-cyan-300">
           ← Back
         </Link>
       </div>
@@ -24,7 +24,7 @@ export default async function ListenerJobsPage() {
   if (!applicant) {
     return (
       <p className="text-sm text-zinc-400">
-        Session invalid. <Link href="/listener">Sign in again</Link>.
+        Session invalid. <Link href="/applicant">Sign in again</Link>.
       </p>
     );
   }

@@ -15,7 +15,7 @@ export function LogoutButton() {
       onClick={async () => {
         setPending(true);
         await logoutApplicant();
-        router.push("/listener");
+        router.push("/applicant");
         router.refresh();
         setPending(false);
       }}

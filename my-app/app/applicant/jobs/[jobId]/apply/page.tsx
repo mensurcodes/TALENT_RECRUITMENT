@@ -5,23 +5,23 @@ import { hasSupabaseConfig } from "../../../lib/supabase";
 import { jobMatchesApplicant, normalizeEmployment } from "../../../lib/employment";
 import { SupabaseNotice } from "../../../components/SupabaseNotice";
 import { ApplyLauncher } from "./ApplyLauncher";
-import { requireListenerApplicantId } from "../../../lib/auth";
+import { requireApplicantSession } from "../../../lib/auth";
 
 type Props = {
   params: Promise<{ jobId: string }>;
 };
 
 export default async function ApplyPage({ params }: Props) {
-  const applicantId = await requireListenerApplicantId();
+  const applicantId = await requireApplicantSession();
   const { jobId: raw } = await params;
   const jobId = Number(raw);
-  if (!Number.isFinite(jobId)) redirect("/listener/jobs");
+  if (!Number.isFinite(jobId)) redirect("/applicant/jobs");
 
   if (!hasSupabaseConfig()) {
     return (
       <div className="space-y-6">
         <SupabaseNotice />
-        <Link href="/listener" className="text-sm text-cyan-400 hover:text-cyan-300">
+        <Link href="/applicant" className="text-sm text-cyan-400 hover:text-cyan-300">
           ← Back
         </Link>
       </div>
@@ -32,13 +32,13 @@ export default async function ApplyPage({ params }: Props) {
   if (!job || !applicant) notFound();
 
   if (!jobMatchesApplicant(job.employment_type, normalizeEmployment(applicant.employment_type))) {
-    redirect("/listener/jobs");
+    redirect("/applicant/jobs");
   }
 
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <div>
-        <Link href={`/listener/jobs/${job.id}`} className="text-sm text-cyan-400 hover:text-cyan-300">
+        <Link href={`/applicant/jobs/${job.id}`} className="text-sm text-cyan-400 hover:text-cyan-300">
           ← Job details
         </Link>
         <h1 className="mt-4 text-2xl font-semibold text-white">Apply</h1>

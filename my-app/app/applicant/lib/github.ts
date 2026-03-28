@@ -29,7 +29,7 @@ export async function fetchGithubContext(url: string): Promise<GithubContext | n
   const base = `https://api.github.com/repos/${owner}/${repo}`;
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "TalentListenerPortal/1.0",
+    "User-Agent": "TalentApplicantPortal/1.0",
   };
   const token = process.env.GITHUB_TOKEN;
   if (token) {

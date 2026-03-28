@@ -46,14 +46,7 @@ export type RubricEvaluation = {
   rubricBreakdown: { criterion: string; score: number; max: number; note: string }[];
 };
 
-export const LISTENER_SESSION_KEY = "talent_listener_session_v1";
-export const LISTENER_ASSESSMENT_KEY = "talent_listener_assessment_v1";
-
-export type ListenerSession = {
-  applicantId: number;
-  applicantName: string;
-  employmentBucket: EmploymentBucket;
-};
+export const APPLICANT_ASSESSMENT_KEY = "talent_applicant_assessment_v1";
 
 export type StoredAssessment = {
   jobId: number;

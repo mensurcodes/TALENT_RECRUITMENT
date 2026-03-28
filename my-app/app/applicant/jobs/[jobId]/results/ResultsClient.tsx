@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { RubricEvaluation, StoredAssessment } from "../../../types";
-import { LISTENER_ASSESSMENT_KEY } from "../../../types";
+import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
 
 export function ResultsClient({
   jobId,
@@ -16,7 +16,7 @@ export function ResultsClient({
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(LISTENER_ASSESSMENT_KEY);
+      const raw = sessionStorage.getItem(APPLICANT_ASSESSMENT_KEY);
       if (!raw) return;
       const s = JSON.parse(raw) as StoredAssessment;
       if (s.jobId !== jobId || s.applicantId !== applicantId) return;
@@ -32,7 +32,7 @@ export function ResultsClient({
         No results in this browser session. Complete an assessment first.
         <div className="mt-4">
           <Link
-            href={`/listener/jobs/${jobId}`}
+            href={`/applicant/jobs/${jobId}`}
             className="text-cyan-400 hover:text-cyan-300"
           >
             ← Job
@@ -48,7 +48,7 @@ export function ResultsClient({
     <div className="space-y-10">
       <div>
         <Link
-          href="/listener/jobs"
+          href="/applicant/jobs"
           className="text-sm text-cyan-400 hover:text-cyan-300"
         >
           ← Matched jobs

@@ -1,8 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { getListenerApplicantId } from "./lib/auth";
-import { LISTENER_APPLICANT_COOKIE } from "./lib/constants";
+import { getApplicantSessionId } from "./lib/auth";
+import { APPLICANT_SESSION_COOKIE } from "./lib/constants";
 import { getSupabase, hasSupabaseConfig } from "./lib/supabase";
 import { fetchGithubContext } from "./lib/github";
 import { fetchResumeExcerpt } from "./lib/resume";
@@ -165,7 +165,7 @@ export async function buildAssessmentPayload(
   githubUrl: string,
 ): Promise<{ job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment } | { error: string }> {
   if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
-  const sessionId = await getListenerApplicantId();
+  const sessionId = await getApplicantSessionId();
   if (!sessionId || sessionId !== applicantId) {
     return { error: "Sign in to continue." };
   }
@@ -280,14 +280,14 @@ export async function evaluateWithRubric(input: {
   applicantId: number;
 }): Promise<RubricEvaluation> {
   const { job, generated, answers, applicantId } = input;
-  const sessionId = await getListenerApplicantId();
+  const sessionId = await getApplicantSessionId();
   if (!sessionId || sessionId !== applicantId) {
     return {
       overallScore: 0,
       maxScore: 100,
       summary: "Your session is invalid or expired. Sign in again and retry the assessment.",
       strengths: [],
-      improvements: ["Re-authenticate from the Listener portal home page."],
+      improvements: ["Re-authenticate from the applicant portal home page."],
       rubricBreakdown: [],
     };
   }
@@ -346,7 +346,7 @@ export async function loginApplicant(
     .maybeSingle();
   if (error || !data) return { error: "Invalid username or password." };
   const cookieStore = await cookies();
-  cookieStore.set(LISTENER_APPLICANT_COOKIE, String(data.id), {
+  cookieStore.set(APPLICANT_SESSION_COOKIE, String(data.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -358,5 +358,5 @@ export async function loginApplicant(
 
 export async function logoutApplicant(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(LISTENER_APPLICANT_COOKIE);
+  cookieStore.delete(APPLICANT_SESSION_COOKIE);
 }

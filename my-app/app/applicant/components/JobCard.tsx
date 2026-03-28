@@ -35,7 +35,7 @@ export function JobCard({ job }: { job: JobRow }) {
       ) : null}
       <div className="mt-5 flex flex-1 flex-col justify-end gap-3 sm:flex-row sm:items-center">
         <Link
-          href={`/listener/jobs/${job.id}`}
+          href={`/applicant/jobs/${job.id}`}
           className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400"
         >
           View & apply

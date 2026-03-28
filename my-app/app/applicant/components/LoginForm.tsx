@@ -22,18 +22,18 @@ export function LoginForm() {
       setError(r.error);
       return;
     }
-    router.push("/listener/jobs");
+    router.push("/applicant/jobs");
     router.refresh();
   }
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-md space-y-6 rounded-2xl border border-white/10 bg-white/[0.03] p-8">
       <div className="space-y-2">
-        <label htmlFor="listener-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label htmlFor="applicant-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Username
         </label>
         <input
-          id="listener-username"
+          id="applicant-username"
           name="username"
           type="text"
           autoComplete="username"
@@ -42,11 +42,11 @@ export function LoginForm() {
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="listener-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label htmlFor="applicant-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Password
         </label>
         <input
-          id="listener-password"
+          id="applicant-password"
           name="password"
           type="password"
           autoComplete="current-password"
