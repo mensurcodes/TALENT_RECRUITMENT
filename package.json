@@ -1,0 +1,11 @@
+{
+  "name": "talent-recruitment",
+  "private": true,
+  "workspaces": ["my-app"],
+  "scripts": {
+    "dev": "npm run dev -w my-app",
+    "build": "npm run build -w my-app",
+    "start": "npm run start -w my-app",
+    "lint": "npm run lint -w my-app"
+  }
+}
