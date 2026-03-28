@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: monorepoRoot,
   },
+  /** Common mistaken URLs — applicant routes live under /applicant/… */
+  async redirects() {
+    return [
+      { source: "/jobs", destination: "/applicant/jobs", permanent: false },
+      { source: "/jobs/:path*", destination: "/applicant/jobs/:path*", permanent: false },
+      { source: "/login", destination: "/applicant", permanent: false },
+      { source: "/applicant/login", destination: "/applicant", permanent: false },
+    ];
+  },
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
   experimental: {
     serverActions: {
