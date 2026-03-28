@@ -104,25 +104,24 @@ export async function fetchJob(jobId: number): Promise<JobRow | null> {
   return data as JobRow;
 }
 
-function mockQuestions(job: JobRow): AssessmentQuestion[] {
-  const title = job.title;
-  const company = job.company_name;
+/** Fallback when OpenAI is unavailable — no job text; repo-only phrasing. */
+function mockQuestions(): AssessmentQuestion[] {
   return [
     {
       id: "q1",
-      prompt: `For "${title}" at ${company}: walk through a concrete part of your GitHub repository (name files or modules) that shows how you would deliver work in this role. What trade-offs did you make?`,
+      prompt: `Using specific file or folder paths from this repository’s tree or excerpts, walk through one area of the codebase: what it does, how it fits the rest of the project, and a trade-off visible in how it’s structured.`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q2",
-      prompt: `From your repo’s structure, README, and stack: what is one reliability or security risk you would address before shipping to users, and what change would you make?`,
+      prompt: `From the README, dependencies, or source excerpts shown for this repo: name one reliability or security concern implied by the current design and what concrete change you would make (reference real paths or config files if present).`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
     {
       id: "q3",
-      prompt: `How would you onboard a teammate to this codebase? Reference real paths, conventions, or docs visible in the repository.`,
+      prompt: `How would you onboard another developer to this repository? Reference actual paths, conventions, or documentation that appear in the provided context.`,
       prepSeconds: 60,
       answerSeconds: 300,
     },
@@ -223,9 +222,7 @@ export async function buildAssessmentFromApplyForm(
     .filter(Boolean)
     .join("\n\n");
 
-  const hasResume = resumeDigest.trim().length > 0;
-
-  const system = `You are an expert hiring assessor. Output strict JSON only.
+  const system = `You are an expert technical assessor. Output strict JSON only.
 Schema:
 {
   "questions": [
@@ -239,25 +236,12 @@ Schema:
 }
 Rules:
 - 3 to 5 questions.
-- Primary evidence is the GitHub / codebase context (README, file tree, languages, source excerpts). Every question must cite concrete repo details (paths, files, stack, patterns) where possible.
-${
-  hasResume
-    ? `- A resume excerpt is also provided: cross-check it with the repository (e.g. claimed skills vs what the repo shows) and ask hybrid questions that connect both. Do not ask resume-only questions that ignore the repo.`
-    : `- No resume was provided: do not assume a work history document. Ground every question in the repository plus the job description.`
-}
-- prepSeconds always 60. answerSeconds always 300 unless role needs longer (max 420).
-- No boilerplate "tell me about yourself". Make them technical/behavioral hybrids grounded in this codebase.`;
+- You will receive ONLY a GitHub repository digest (no job posting, employer, or role description). Do not invent a role or ask the candidate to relate answers to a specific job, company, or hiring context.
+- Every question must be answerable using only that digest. Each prompt must reference concrete evidence from it: real file paths, README phrases, dependencies, languages, tree structure, or quoted patterns from source excerpts. If the digest is thin, ask probing questions about what little is shown rather than going generic.
+- Do not ask "tell me about yourself" or career history unrelated to this repository.
+- prepSeconds always 60. answerSeconds always 300 unless the repo complexity clearly needs longer (max 420).`;
 
-  const user = `Job title: ${job.title}
-Company: ${job.company_name}
-Employment: ${job.employment_type ?? "unspecified"}
-Job description:\n${(job.description ?? "").slice(0, 6000)}
-
-${
-  hasResume
-    ? `Resume excerpt (optional cross-reference with the repo):\n${resumeDigest}\n\n`
-    : `Resume excerpt: (none — questions must come from the repository and role only.)\n\n`
-}GitHub / codebase context:\n${codebaseDigest.slice(0, 16_000)}`;
+  const user = `GitHub repository digest (sole input for questions):\n${codebaseDigest.slice(0, 18_000)}`;
 
   const parsed = await openaiJson<{ questions: AssessmentQuestion[] }>(system, user);
   let questions: AssessmentQuestion[] =
@@ -269,7 +253,7 @@ ${
     })) ?? [];
 
   if (questions.length < 3) {
-    questions = mockQuestions(job);
+    questions = mockQuestions();
   }
 
   const generated: GeneratedAssessment = {

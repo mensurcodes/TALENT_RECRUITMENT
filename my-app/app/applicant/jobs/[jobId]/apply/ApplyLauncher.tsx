@@ -73,7 +73,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
         </code>{" "}
         in{" "}
         <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] shadow-sm">.env.local</code>
-        ). Optional resume link (further down) can cross-check claims against the repo — not required.
+        ). Optional resume link below is stored for your profile and final scoring only — interview questions are generated from the repository alone.
       </p>
 
       {error && (
@@ -109,7 +109,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition-shadow duration-200 focus:border-blue-500/80 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
         />
         <p className="text-xs text-slate-500">
-          If set, prompts can relate this text to your repo. Leave blank for GitHub + job description only.
+          Assessment questions are generated from the repo only. This link is stored for your record and grading; it is not used to draft questions.
         </p>
       </div>
 

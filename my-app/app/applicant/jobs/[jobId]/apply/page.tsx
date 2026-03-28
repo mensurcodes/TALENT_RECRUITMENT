@@ -64,7 +64,7 @@ export default async function ApplyPage({ params }: Props) {
       <div className="applicant-stagger grid gap-4 sm:grid-cols-3">
         {[
           { n: "1", t: "GitHub context", d: "Public repo is scraped; optional resume link to cross-check." },
-          { n: "2", t: "Questions", d: "Prompts grounded in the repository and role." },
+          { n: "2", t: "Questions", d: "Prompts generated only from your repository." },
           { n: "3", t: "Assessment", d: "Timed answers, optional video." },
         ].map((s) => (
           <div
