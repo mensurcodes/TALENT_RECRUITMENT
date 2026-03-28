@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { evaluateWithRubric, transcribeVideoAnswer } from "../../../actions";
+import { evaluateWithRubric, transcribeVideoAnswer, uploadAssessmentVideo } from "../../../actions";
 import { VideoAnswerRecorder } from "../../../components/VideoAnswerRecorder";
 import type { AssessmentQuestion, QuestionAnswerDetail, StoredAssessment } from "../../../types";
 import { APPLICANT_ASSESSMENT_KEY } from "../../../types";
@@ -144,35 +144,48 @@ export function AssessmentRunner({
       const blob = videoBlobRef.current;
       let videoTranscript = "";
       let videoBase64: string | null = null;
+      let videoObjectPath: string | null = null;
       let videoSkippedReason: string | null = null;
       const hadVideo = Boolean(blob && blob.size > 0);
 
       if (hadVideo && blob) {
         setTranscribing(true);
-        const fd = new FormData();
-        fd.append("file", blob, "answer.webm");
-        const r = await transcribeVideoAnswer(fd);
+        const fdT = new FormData();
+        fdT.append("file", blob, "answer.webm");
+        const tr = await transcribeVideoAnswer(fdT);
         setTranscribing(false);
 
-        if ("error" in r) {
+        if ("error" in tr) {
           if (!auto) {
-            setBanner(r.error);
+            setBanner(tr.error);
             submitting.current = false;
             return;
           }
           videoTranscript = "";
         } else {
-          videoTranscript = r.text;
+          videoTranscript = tr.text;
         }
 
-        if (blob.size <= MAX_INLINE_VIDEO_BYTES) {
-          try {
-            videoBase64 = await blobToBase64(blob);
-          } catch {
-            videoSkippedReason = "Could not read video for storage.";
+        const fdV = new FormData();
+        fdV.append("jobId", String(jobId));
+        fdV.append("questionId", current.id);
+        fdV.append("video", blob, "answer.webm");
+        const up = await uploadAssessmentVideo(fdV);
+        if ("objectPath" in up) {
+          videoObjectPath = up.objectPath;
+        }
+
+        if (!videoObjectPath) {
+          if (blob.size <= MAX_INLINE_VIDEO_BYTES) {
+            try {
+              videoBase64 = await blobToBase64(blob);
+            } catch {
+              videoSkippedReason = "Could not read video for storage.";
+            }
+          } else {
+            videoSkippedReason =
+              "Video larger than inline limit — transcript saved. Add SUPABASE_SERVICE_ROLE_KEY and run storage_assessment_videos.sql to store full WebM files in Supabase Storage.";
           }
-        } else {
-          videoSkippedReason = `Video larger than ${Math.round(MAX_INLINE_VIDEO_BYTES / 1000)}KB — transcript stored only.`;
         }
       }
 
@@ -195,6 +208,7 @@ export function AssessmentRunner({
         writtenNotes: notes,
         videoTranscript,
         hadVideoRecording: hadVideo,
+        videoObjectPath: videoObjectPath ?? undefined,
         videoWebmBase64: videoBase64,
         videoSkippedReason,
         answeredAt: new Date().toISOString(),

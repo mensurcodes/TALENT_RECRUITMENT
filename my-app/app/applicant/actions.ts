@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import { getApplicantSessionId } from "./lib/auth";
 import { APPLICANT_SESSION_COOKIE } from "./lib/constants";
 import { getSupabase, hasSupabaseConfig } from "./lib/supabase";
+import {
+  ASSESSMENT_VIDEOS_BUCKET,
+  getSupabaseAdmin,
+  hasSupabaseServiceRole,
+} from "./lib/supabaseAdmin";
 import { fetchGithubContext, githubRepoUrlHint } from "./lib/github";
 import { fetchResumeExcerpt } from "./lib/resume";
 import { jobMatchesApplicant, normalizeEmployment } from "./lib/employment";
@@ -336,6 +341,77 @@ export async function transcribeVideoAnswer(
     return { error: "Transcription returned empty text. Try again or use the text box." };
   }
   return { text: data.text.trim() };
+}
+
+const MAX_ASSESSMENT_VIDEO_BYTES = 15 * 1024 * 1024;
+
+/** Upload one answer clip to private Supabase Storage (requires service role on server). */
+export async function uploadAssessmentVideo(
+  formData: FormData,
+): Promise<{ objectPath: string } | { error: string }> {
+  if (!hasSupabaseServiceRole()) {
+    return { error: "STORAGE_NOT_CONFIGURED" };
+  }
+  const applicantId = await getApplicantSessionId();
+  if (!applicantId) return { error: "Sign in required." };
+
+  const jobId = Number(formData.get("jobId"));
+  const questionId = String(formData.get("questionId") ?? "").trim();
+  const file = formData.get("video");
+
+  if (!Number.isFinite(jobId) || jobId <= 0) return { error: "Invalid job." };
+  if (!questionId) return { error: "Invalid question." };
+  if (!(file instanceof Blob) || file.size === 0) return { error: "No video file." };
+  if (file.size > MAX_ASSESSMENT_VIDEO_BYTES) {
+    return { error: "Video exceeds 15MB limit." };
+  }
+
+  const safeQ = questionId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
+  const objectPath = `${applicantId}/${jobId}/${Date.now()}_${safeQ}.webm`;
+
+  try {
+    const admin = getSupabaseAdmin();
+    const buf = Buffer.from(await file.arrayBuffer());
+    const { error } = await admin.storage.from(ASSESSMENT_VIDEOS_BUCKET).upload(objectPath, buf, {
+      contentType: file.type || "video/webm",
+      upsert: false,
+    });
+    if (error) return { error: error.message };
+    return { objectPath };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    return { error: msg };
+  }
+}
+
+/**
+ * Short-lived signed URL so the signed-in applicant can play back their own clip.
+ * objectPath must match `{applicantId}/{jobId}/...`.
+ */
+export async function getAssessmentVideoSignedUrl(
+  objectPath: string,
+  jobId: number,
+): Promise<{ url: string } | { error: string }> {
+  if (!hasSupabaseServiceRole()) return { error: "Storage not configured." };
+  const applicantId = await getApplicantSessionId();
+  if (!applicantId) return { error: "Sign in required." };
+
+  const prefix = `${applicantId}/${jobId}/`;
+  if (!objectPath.startsWith(prefix) || objectPath.includes("..")) {
+    return { error: "Invalid path." };
+  }
+
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(ASSESSMENT_VIDEOS_BUCKET)
+      .createSignedUrl(objectPath, 3600);
+    if (error || !data?.signedUrl) return { error: error?.message ?? "Could not sign URL." };
+    return { url: data.signedUrl };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed";
+    return { error: msg };
+  }
 }
 
 export async function evaluateWithRubric(input: {

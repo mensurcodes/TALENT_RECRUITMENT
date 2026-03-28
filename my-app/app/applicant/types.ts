@@ -55,9 +55,14 @@ export type QuestionAnswerDetail = {
   videoTranscript: string;
   /** True when a video was recorded (may still be false if inline body omitted) */
   hadVideoRecording: boolean;
-  /** Inline base64 payload for small WebM clips only */
+  /**
+   * Path inside Supabase Storage bucket `assessment-videos` (set when SUPABASE_SERVICE_ROLE_KEY is configured).
+   * Format: `{applicantId}/{jobId}/{timestamp}_{questionId}.webm`
+   */
+  videoObjectPath?: string | null;
+  /** Inline base64 only when storage is unavailable or upload failed; omit for large blobs */
   videoWebmBase64: string | null;
-  /** If video was too large to store inline */
+  /** If neither storage nor inline video was saved */
   videoSkippedReason: string | null;
   answeredAt: string;
 };
