@@ -66,14 +66,17 @@ export function ApplyLauncher({ job, applicant }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-7">
       <p className="rounded-2xl border border-blue-100/90 bg-gradient-to-br from-blue-50/90 to-white p-5 text-[13px] leading-relaxed text-slate-600 ring-1 ring-blue-500/5">
-        <span className="font-semibold text-slate-900">GitHub</span> — assessments are built from your repo: default
-        branch tree, README, languages, and sample source files. We must successfully load the repo (public URL or{" "}
+        <span className="font-semibold text-slate-900">GitHub</span> — paste a{" "}
+        <strong className="font-semibold text-slate-800">repository</strong> URL or your{" "}
+        <strong className="font-semibold text-slate-800">profile</strong> URL (we scan up to five recently updated{" "}
+        <em>public</em> repos). We load default-branch trees, READMEs, languages, and sample files. Add{" "}
         <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800 shadow-sm">
           GITHUB_TOKEN
         </code>{" "}
-        in{" "}
-        <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] shadow-sm">.env.local</code>
-        ). Optional resume link below is stored for your profile and final scoring only — interview questions are generated from the repository alone.
+        to{" "}
+        <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] shadow-sm">.env.local</code> for
+        higher limits or private repos your token can read. Optional resume link below is stored for scoring only —
+        questions use this GitHub context only.
       </p>
 
       {error && (
@@ -91,7 +94,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
           required
           value={githubUrl}
           onChange={(e) => setGithubUrl(e.target.value)}
-          placeholder="https://github.com/username/repository-name"
+          placeholder="https://github.com/you or https://github.com/you/a-repo"
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition-shadow duration-200 focus:border-blue-500/80 focus:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
         />
       </div>

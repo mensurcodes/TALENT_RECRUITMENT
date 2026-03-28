@@ -192,7 +192,7 @@ export async function buildAssessmentFromApplyForm(
   if (!gh) {
     return {
       error:
-        "Could not load that GitHub repository. Use a public github.com URL (owner/repo), or add GITHUB_TOKEN in .env.local for higher limits and private repos your token can read.",
+        "Could not load GitHub data. Use a public repo URL (https://github.com/owner/repo) or a profile URL (https://github.com/username) — we merge up to five recently updated public repos. Unknown users, private-only activity, or rate limits: add GITHUB_TOKEN to .env.local.",
     };
   }
 

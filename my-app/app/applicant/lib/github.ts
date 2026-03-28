@@ -34,43 +34,78 @@ const GITHUB_TOP_LEVEL_SEGMENTS = new Set([
   "readme",
 ]);
 
+function normalizeGithubUrl(raw: string): URL | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * If the URL cannot be a repo API target, returns a specific user-facing message.
- * Profile links like https://github.com/abdulhafizcodes are invalid — we need /owner/repo.
+ * User or org login from a profile-style URL (one path segment), e.g. https://github.com/abdulhafizcodes
+ */
+export function parseGithubProfileLogin(raw: string): string | null {
+  const u = normalizeGithubUrl(raw);
+  if (!u) return null;
+  const host = u.hostname.replace(/^www\./, "");
+  if (!host.endsWith("github.com") && host !== "github.com") return null;
+  const parts = u.pathname.split("/").filter(Boolean);
+  if (parts.length !== 1) return null;
+  const seg = parts[0]!.toLowerCase();
+  if (GITHUB_TOP_LEVEL_SEGMENTS.has(seg)) return null;
+  return parts[0]!;
+}
+
+/**
+ * If the URL is invalid for any GitHub flow, returns a user-facing message.
+ * Single-segment profile URLs are valid (we aggregate public repos).
  */
 export function githubRepoUrlHint(raw: string): string | null {
   const trimmed = raw.trim();
-  if (!trimmed) return "Enter a GitHub repository URL.";
-  let u: URL;
-  try {
-    u = new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`);
-  } catch {
-    return "That does not look like a valid URL.";
-  }
+  if (!trimmed) return "Enter a GitHub URL.";
+  const u = normalizeGithubUrl(trimmed);
+  if (!u) return "That does not look like a valid URL.";
   const host = u.hostname.replace(/^www\./, "");
   if (!host.endsWith("github.com") && host !== "github.com") {
     return "Use a URL on github.com.";
   }
   const parts = u.pathname.split("/").filter(Boolean);
   if (parts.length === 0) {
-    return "Paste a repository URL with two path parts: https://github.com/username/repository-name";
+    return "Paste a profile (https://github.com/username) or repository URL (https://github.com/username/repo).";
   }
   if (parts.length === 1) {
     const seg = parts[0]!.toLowerCase();
     if (GITHUB_TOP_LEVEL_SEGMENTS.has(seg)) {
-      return "That is a GitHub site page, not a repository. Use a URL like https://github.com/username/repository-name";
+      return "That is a GitHub site page, not a user profile. Use https://github.com/your-username or a full repo URL.";
     }
-    const login = parts[0]!;
-    return `That link is a GitHub profile or organization (“${login}”), not a repository. Open a specific repo and copy its URL — for example https://github.com/${login}/YOUR-REPO-NAME`;
+    return null;
   }
   return null;
 }
 
+function githubApiHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "TalentApplicantPortal/1.0",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+/** How many public repos to scrape when given a profile URL (limits GitHub API load). */
+const MAX_PROFILE_REPOS = 5;
+
 export function parseGithubRepo(url: string): { owner: string; repo: string } | null {
   try {
-    const t = url.trim();
-    const u = new URL(t.startsWith("http://") || t.startsWith("https://") ? t : `https://${t}`);
-    if (!u.hostname.includes("github.com")) return null;
+    const u = normalizeGithubUrl(url);
+    if (!u || !u.hostname.includes("github.com")) return null;
     const parts = u.pathname.split("/").filter(Boolean);
     if (parts.length < 2) return null;
     const [owner, repo] = parts;
@@ -79,6 +114,75 @@ export function parseGithubRepo(url: string): { owner: string; repo: string } | 
   } catch {
     return null;
   }
+}
+
+type RepoFetchOpts = {
+  maxTreePaths?: number;
+  maxFilesToFetch?: number;
+  maxSnippetChars?: number;
+};
+
+async function listPublicReposForLogin(
+  login: string,
+  headers: HeadersInit,
+): Promise<{ owner: string; name: string }[]> {
+  const metaRes = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}`, {
+    headers,
+    next: { revalidate: 300 },
+  });
+  if (!metaRes.ok) return [];
+  const meta = (await metaRes.json()) as { type?: string };
+  const listUrl =
+    meta.type === "Organization"
+      ? `https://api.github.com/orgs/${encodeURIComponent(login)}/repos?per_page=100&sort=updated&type=public`
+      : `https://api.github.com/users/${encodeURIComponent(login)}/repos?per_page=100&sort=updated&type=public`;
+
+  const res = await fetch(listUrl, { headers, next: { revalidate: 300 } });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { fork?: boolean; name: string; owner: { login: string } }[];
+  if (!Array.isArray(data)) return [];
+  const nonForks = data.filter((r) => !r.fork);
+  const ordered = nonForks.length > 0 ? nonForks : data;
+  return ordered.slice(0, MAX_PROFILE_REPOS).map((r) => ({ owner: r.owner.login, name: r.name }));
+}
+
+function mergeProfileGithubContexts(login: string, contexts: GithubContext[]): GithubContext {
+  const block = (c: GithubContext) =>
+    [
+      `[${c.owner}/${c.repo}]`,
+      c.description ? `About: ${c.description}` : "",
+      c.language ? `Languages: ${c.language}` : "",
+      c.topics.length ? `Topics: ${c.topics.join(", ")}` : "",
+      c.readmeExcerpt ? `README:\n${c.readmeExcerpt.slice(0, 3500)}` : "",
+      c.fileTreeSample.length
+        ? `Sample paths:\n${c.fileTreeSample.slice(0, 60).join("\n")}`
+        : "",
+      c.codeSnippetsDigest ? `Source excerpts:\n${c.codeSnippetsDigest.slice(0, 7000)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+  const mergedSnippets = contexts
+    .map((c) => `=== ${c.owner}/${c.repo} ===\n${block(c)}`)
+    .join("\n\n")
+    .slice(0, 32_000);
+
+  const repoList = contexts.map((c) => `- ${c.owner}/${c.repo}`).join("\n");
+  const langs = contexts.map((c) => c.language).filter(Boolean);
+  const languageSummary = langs.length ? [...new Set(langs)].slice(0, 6).join(" · ") : null;
+
+  return {
+    owner: login,
+    repo: `${contexts.length}-public-repos`,
+    description: `Aggregated from ${contexts.length} most recently updated public repositories on this GitHub profile or organization.`,
+    language: languageSummary,
+    topics: [],
+    readmeExcerpt: `Included repositories:\n${repoList}`,
+    defaultBranch: null,
+    fileTreeSample: [],
+    codeSnippetsDigest: mergedSnippets,
+    codebaseIndexed: contexts.some((c) => c.codebaseIndexed),
+  };
 }
 
 const SKIP_DIR = new Set([
@@ -203,7 +307,7 @@ function filePriority(path: string): number {
 
 type TreeBlob = { path: string; type: string; size?: number };
 
-function pickPathsForFetch(blobs: TreeBlob[]): string[] {
+function pickPathsForFetch(blobs: TreeBlob[], maxFiles: number): string[] {
   const candidates = blobs.filter(
     (b) => b.type === "blob" && b.path && !shouldSkipPath(b.path),
   );
@@ -217,7 +321,7 @@ function pickPathsForFetch(blobs: TreeBlob[]): string[] {
 
   const picked: string[] = [];
   for (const b of withExt) {
-    if (picked.length >= MAX_FILES_TO_FETCH) break;
+    if (picked.length >= maxFiles) break;
     const sz = typeof b.size === "number" ? b.size : 0;
     if (sz > MAX_BYTES_PER_FILE) continue;
     picked.push(b.path);
@@ -256,20 +360,17 @@ async function fetchLanguages(
   return (await res.json()) as Record<string, number>;
 }
 
-export async function fetchGithubContext(url: string): Promise<GithubContext | null> {
-  const parsed = parseGithubRepo(url);
-  if (!parsed) return null;
-  const { owner, repo } = parsed;
+async function fetchGithubContextForRepo(
+  owner: string,
+  repo: string,
+  headers: HeadersInit,
+  opts?: RepoFetchOpts,
+): Promise<GithubContext | null> {
+  const maxTree = opts?.maxTreePaths ?? MAX_TREE_PATHS_LIST;
+  const maxFiles = opts?.maxFilesToFetch ?? MAX_FILES_TO_FETCH;
+  const maxSnippet = opts?.maxSnippetChars ?? MAX_TOTAL_SNIPPET_CHARS;
+
   const base = `https://api.github.com/repos/${owner}/${repo}`;
-  const headers: HeadersInit = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "TalentApplicantPortal/1.0",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  const token = process.env.GITHUB_TOKEN;
-  if (token) {
-    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
-  }
 
   try {
     const metaRes = await fetch(base, { headers, next: { revalidate: 300 } });
@@ -328,12 +429,12 @@ export async function fetchGithubContext(url: string): Promise<GithubContext | n
                 .filter((b) => b.type === "blob" && !shouldSkipPath(b.path))
                 .map((b) => b.path)
                 .sort();
-              fileTreeSample = paths.slice(0, MAX_TREE_PATHS_LIST);
+              fileTreeSample = paths.slice(0, maxTree);
               if (treeJson.truncated && fileTreeSample.length > 0) {
                 fileTreeSample.push("… (tree truncated by GitHub — listing partial)");
               }
 
-              const toFetch = pickPathsForFetch(blobs);
+              const toFetch = pickPathsForFetch(blobs, maxFiles);
               const snippets: string[] = [];
               let total = 0;
               const batchSize = 5;
@@ -347,11 +448,11 @@ export async function fetchGithubContext(url: string): Promise<GithubContext | n
                   if (!text) continue;
                   const excerpt = text.slice(0, Math.min(3500, MAX_BYTES_PER_FILE));
                   const block = `--- FILE: ${batch[j]} ---\n${excerpt}`;
-                  if (total + block.length > MAX_TOTAL_SNIPPET_CHARS) break;
+                  if (total + block.length > maxSnippet) break;
                   snippets.push(block);
                   total += block.length;
                 }
-                if (total >= MAX_TOTAL_SNIPPET_CHARS) break;
+                if (total >= maxSnippet) break;
               }
               codeSnippetsDigest = snippets.join("\n\n");
               codebaseIndexed = toFetch.length > 0 || fileTreeSample.length > 0;
@@ -387,4 +488,34 @@ export async function fetchGithubContext(url: string): Promise<GithubContext | n
   } catch {
     return null;
   }
+}
+
+/**
+ * Loads one repository, or — for a profile/org URL like https://github.com/username —
+ * lists public repos and merges digests from the most recently updated ones.
+ */
+export async function fetchGithubContext(url: string): Promise<GithubContext | null> {
+  const headers = githubApiHeaders();
+  const parsed = parseGithubRepo(url);
+  if (parsed) {
+    return fetchGithubContextForRepo(parsed.owner, parsed.repo, headers);
+  }
+  const profileLogin = parseGithubProfileLogin(url);
+  if (!profileLogin) return null;
+
+  const repos = await listPublicReposForLogin(profileLogin, headers);
+  if (repos.length === 0) return null;
+
+  const profileOpts: RepoFetchOpts = {
+    maxFilesToFetch: 8,
+    maxSnippetChars: 9000,
+    maxTreePaths: 70,
+  };
+  const contexts: GithubContext[] = [];
+  for (const r of repos) {
+    const c = await fetchGithubContextForRepo(r.owner, r.name, headers, profileOpts);
+    if (c) contexts.push(c);
+  }
+  if (contexts.length === 0) return null;
+  return mergeProfileGithubContexts(profileLogin, contexts);
 }
