@@ -50,7 +50,7 @@ export function AssessmentRunner({
   useEffect(() => {
     const s = loadStored();
     if (!s || s.jobId !== jobId || s.applicantId !== applicantId) {
-      router.replace(`/listener/jobs/${jobId}/apply?applicantId=${applicantId}`);
+      router.replace(`/listener/jobs/${jobId}/apply`);
       return;
     }
     setStored(s);
@@ -93,6 +93,7 @@ export function AssessmentRunner({
         job: stored.job,
         generated: stored.generated,
         answers: nextAnswers,
+        applicantId: stored.applicantId,
       });
       const final: StoredAssessment = {
         ...stored,
@@ -103,7 +104,7 @@ export function AssessmentRunner({
       saveStored(final);
       setStored(final);
       setBusy(false);
-      router.replace(`/listener/jobs/${jobId}/results?applicantId=${applicantId}`);
+      router.replace(`/listener/jobs/${jobId}/results`);
     },
     [applicantId, jobId, router, stored],
   );

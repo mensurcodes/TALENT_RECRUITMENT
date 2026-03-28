@@ -1,19 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { fetchApplicant, fetchQualifiedJobs } from "../actions";
 import { hasSupabaseConfig } from "../lib/supabase";
 import { normalizeEmployment } from "../lib/employment";
 import { JobCard } from "../components/JobCard";
 import { SupabaseNotice } from "../components/SupabaseNotice";
+import { requireListenerApplicantId } from "../lib/auth";
 
-type Props = { searchParams: Promise<{ applicantId?: string }> };
-
-export default async function ListenerJobsPage({ searchParams }: Props) {
-  const sp = await searchParams;
-  const applicantId = Number(sp.applicantId);
-  if (!Number.isFinite(applicantId) || applicantId <= 0) {
-    redirect("/listener");
-  }
+export default async function ListenerJobsPage() {
+  const applicantId = await requireListenerApplicantId();
 
   if (!hasSupabaseConfig()) {
     return (
@@ -27,7 +21,13 @@ export default async function ListenerJobsPage({ searchParams }: Props) {
   }
 
   const applicant = await fetchApplicant(applicantId);
-  if (!applicant) redirect("/listener");
+  if (!applicant) {
+    return (
+      <p className="text-sm text-zinc-400">
+        Session invalid. <Link href="/listener">Sign in again</Link>.
+      </p>
+    );
+  }
 
   const jobs = await fetchQualifiedJobs(applicantId);
   const pref = normalizeEmployment(applicant.employment_type);
@@ -36,10 +36,7 @@ export default async function ListenerJobsPage({ searchParams }: Props) {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Link href="/listener" className="text-sm text-cyan-400 hover:text-cyan-300">
-            ← All applicants
-          </Link>
-          <h1 className="mt-3 text-2xl font-semibold text-white sm:text-3xl">Matched jobs</h1>
+          <h1 className="text-2xl font-semibold text-white sm:text-3xl">Matched jobs</h1>
           <p className="mt-2 text-sm text-zinc-400">
             Signed in as{" "}
             <span className="text-zinc-200">
@@ -63,7 +60,7 @@ export default async function ListenerJobsPage({ searchParams }: Props) {
         <ul className="grid gap-5 lg:grid-cols-2">
           {jobs.map((job) => (
             <li key={job.id}>
-              <JobCard job={job} applicantId={applicantId} />
+              <JobCard job={job} />
             </li>
           ))}
         </ul>

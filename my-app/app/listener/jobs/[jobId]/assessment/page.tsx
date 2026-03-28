@@ -1,25 +1,24 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AssessmentRunner } from "./AssessmentRunner";
+import { requireListenerApplicantId } from "../../../lib/auth";
 
 type Props = {
   params: Promise<{ jobId: string }>;
-  searchParams: Promise<{ applicantId?: string }>;
 };
 
-export default async function AssessmentPage({ params, searchParams }: Props) {
+export default async function AssessmentPage({ params }: Props) {
+  const applicantId = await requireListenerApplicantId();
   const { jobId: raw } = await params;
-  const sp = await searchParams;
   const jobId = Number(raw);
-  const applicantId = Number(sp.applicantId);
-  if (!Number.isFinite(jobId) || !Number.isFinite(applicantId)) {
-    redirect("/listener");
+  if (!Number.isFinite(jobId)) {
+    redirect("/listener/jobs");
   }
 
   return (
     <div className="space-y-6">
       <Link
-        href={`/listener/jobs/${jobId}/apply?applicantId=${applicantId}`}
+        href={`/listener/jobs/${jobId}/apply`}
         className="text-sm text-cyan-400 hover:text-cyan-300"
       >
         ← Back to application

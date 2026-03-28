@@ -9,14 +9,7 @@ function badge(type: string | null | undefined) {
   return type?.trim() || "Role";
 }
 
-export function JobCard({
-  job,
-  applicantId,
-}: {
-  job: JobRow;
-  applicantId: number;
-}) {
-  const q = new URLSearchParams({ applicantId: String(applicantId) });
+export function JobCard({ job }: { job: JobRow }) {
   return (
     <article className="group flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition hover:border-cyan-500/30 hover:bg-white/[0.05]">
       <div className="flex flex-wrap items-center gap-2">
@@ -42,7 +35,7 @@ export function JobCard({
       ) : null}
       <div className="mt-5 flex flex-1 flex-col justify-end gap-3 sm:flex-row sm:items-center">
         <Link
-          href={`/listener/jobs/${job.id}?${q.toString()}`}
+          href={`/listener/jobs/${job.id}`}
           className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400"
         >
           View & apply

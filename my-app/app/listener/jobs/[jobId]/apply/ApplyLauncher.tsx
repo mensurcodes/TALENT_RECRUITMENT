@@ -21,7 +21,7 @@ export function ApplyLauncher({ job, applicant }: Props) {
   function persistAndGo(payload: StoredAssessment) {
     if (typeof window === "undefined") return;
     sessionStorage.setItem(LISTENER_ASSESSMENT_KEY, JSON.stringify(payload));
-    router.push(`/listener/jobs/${job.id}/assessment?applicantId=${applicant.id}`);
+    router.push(`/listener/jobs/${job.id}/assessment`);
   }
 
   function onSubmit(e: React.FormEvent) {

@@ -4,18 +4,17 @@ import { fetchApplicant, fetchJob } from "../../actions";
 import { hasSupabaseConfig } from "../../lib/supabase";
 import { jobMatchesApplicant, normalizeEmployment } from "../../lib/employment";
 import { SupabaseNotice } from "../../components/SupabaseNotice";
+import { requireListenerApplicantId } from "../../lib/auth";
 
 type Props = {
   params: Promise<{ jobId: string }>;
-  searchParams: Promise<{ applicantId?: string }>;
 };
 
-export default async function ListenerJobDetailPage({ params, searchParams }: Props) {
+export default async function ListenerJobDetailPage({ params }: Props) {
+  const applicantId = await requireListenerApplicantId();
   const { jobId: raw } = await params;
-  const sp = await searchParams;
   const jobId = Number(raw);
-  const applicantId = Number(sp.applicantId);
-  if (!Number.isFinite(jobId) || !Number.isFinite(applicantId)) redirect("/listener");
+  if (!Number.isFinite(jobId)) redirect("/listener/jobs");
 
   if (!hasSupabaseConfig()) {
     return (
@@ -32,18 +31,13 @@ export default async function ListenerJobDetailPage({ params, searchParams }: Pr
   if (!job || !applicant) notFound();
 
   if (!jobMatchesApplicant(job.employment_type, normalizeEmployment(applicant.employment_type))) {
-    redirect(`/listener/jobs?applicantId=${applicantId}`);
+    redirect("/listener/jobs");
   }
-
-  const q = new URLSearchParams({ applicantId: String(applicantId) });
 
   return (
     <article className="space-y-8">
       <div>
-        <Link
-          href={`/listener/jobs?applicantId=${applicantId}`}
-          className="text-sm text-cyan-400 hover:text-cyan-300"
-        >
+        <Link href="/listener/jobs" className="text-sm text-cyan-400 hover:text-cyan-300">
           ← Matched jobs
         </Link>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">{job.title}</h1>
@@ -89,7 +83,7 @@ export default async function ListenerJobDetailPage({ params, searchParams }: Pr
 
       <div className="flex flex-wrap gap-3">
         <Link
-          href={`/listener/jobs/${job.id}/apply?${q.toString()}`}
+          href={`/listener/jobs/${job.id}/apply`}
           className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-[#041018] transition hover:bg-cyan-400"
         >
           Apply & start assessment

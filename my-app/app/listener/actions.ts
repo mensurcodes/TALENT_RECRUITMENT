@@ -1,5 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { getListenerApplicantId } from "./lib/auth";
+import { LISTENER_APPLICANT_COOKIE } from "./lib/constants";
 import { getSupabase, hasSupabaseConfig } from "./lib/supabase";
 import { fetchGithubContext } from "./lib/github";
 import { fetchResumeExcerpt } from "./lib/resume";
@@ -162,6 +165,10 @@ export async function buildAssessmentPayload(
   githubUrl: string,
 ): Promise<{ job: JobRow; applicant: ApplicantRow; generated: GeneratedAssessment } | { error: string }> {
   if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
+  const sessionId = await getListenerApplicantId();
+  if (!sessionId || sessionId !== applicantId) {
+    return { error: "Sign in to continue." };
+  }
   const [job, applicant] = await Promise.all([fetchJob(jobId), fetchApplicant(applicantId)]);
   if (!job) return { error: "Job not found." };
   if (!applicant) return { error: "Applicant not found." };
@@ -270,8 +277,20 @@ export async function evaluateWithRubric(input: {
   job: JobRow;
   generated: GeneratedAssessment;
   answers: Record<string, string>;
+  applicantId: number;
 }): Promise<RubricEvaluation> {
-  const { job, generated, answers } = input;
+  const { job, generated, answers, applicantId } = input;
+  const sessionId = await getListenerApplicantId();
+  if (!sessionId || sessionId !== applicantId) {
+    return {
+      overallScore: 0,
+      maxScore: 100,
+      summary: "Your session is invalid or expired. Sign in again and retry the assessment.",
+      strengths: [],
+      improvements: ["Re-authenticate from the Listener portal home page."],
+      rubricBreakdown: [],
+    };
+  }
   const rubric = (job.grading_rubric ?? "").trim() || "General: communication, technical depth, relevance, structure.";
   const qa = generated.questions
     .map((q) => `Q (${q.id}): ${q.prompt}\nA: ${answers[q.id] ?? ""}`)
@@ -309,4 +328,35 @@ Be candid, actionable, and reference rubric criteria by name when possible.`;
   }
 
   return mockEvaluation(job, generated.questions, answers);
+}
+
+export async function loginApplicant(
+  username: string,
+  password: string,
+): Promise<{ ok?: true; error?: string }> {
+  if (!hasSupabaseConfig()) return { error: "Supabase is not configured." };
+  const u = username.trim();
+  if (!u || !password) return { error: "Enter username and password." };
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("applicants")
+    .select("id")
+    .eq("username", u)
+    .eq("password", password)
+    .maybeSingle();
+  if (error || !data) return { error: "Invalid username or password." };
+  const cookieStore = await cookies();
+  cookieStore.set(LISTENER_APPLICANT_COOKIE, String(data.id), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return { ok: true };
+}
+
+export async function logoutApplicant(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(LISTENER_APPLICANT_COOKIE);
 }

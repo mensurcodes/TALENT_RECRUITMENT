@@ -32,7 +32,7 @@ export function ResultsClient({
         No results in this browser session. Complete an assessment first.
         <div className="mt-4">
           <Link
-            href={`/listener/jobs/${jobId}?applicantId=${applicantId}`}
+            href={`/listener/jobs/${jobId}`}
             className="text-cyan-400 hover:text-cyan-300"
           >
             ← Job
@@ -48,7 +48,7 @@ export function ResultsClient({
     <div className="space-y-10">
       <div>
         <Link
-          href={`/listener/jobs?applicantId=${applicantId}`}
+          href="/listener/jobs"
           className="text-sm text-cyan-400 hover:text-cyan-300"
         >
           ← Matched jobs
