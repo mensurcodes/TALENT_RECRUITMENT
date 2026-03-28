@@ -71,9 +71,9 @@ export default async function ApplyPage({ params, searchParams }: Props) {
 
       <div className="applicant-stagger grid gap-4 sm:grid-cols-3">
         {[
-          { n: "1", t: "Resume + GitHub", d: "PDF or link; repos matched to your resume when possible." },
-          { n: "2", t: "Five questions", d: "Engineering depth: design, trade-offs, how well you know your work." },
-          { n: "3", t: "Assessment", d: "Timed answers, optional video." },
+          { n: "1", t: "Resume + GitHub", d: "Authorize access; repos prioritized from your resume when possible." },
+          { n: "2", t: "Five questions", d: "Engineering depth grounded in your materials." },
+          { n: "3", t: "Locked assessment", d: "One session; video & transcript may be stored for review." },
         ].map((s) => (
           <div
             key={s.n}

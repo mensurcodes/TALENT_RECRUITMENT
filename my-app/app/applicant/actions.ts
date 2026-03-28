@@ -191,6 +191,14 @@ export async function buildAssessmentFromApplyForm(
   const jobId = Number(formData.get("jobId"));
   if (!Number.isFinite(jobId) || jobId <= 0) return { error: "Invalid job." };
 
+  const consent = formData.get("consentGithubAssessment");
+  if (consent !== "on" && consent !== "true") {
+    return {
+      error:
+        "Please confirm that you authorize GitHub and resume access for this assessment. Scroll down and tick the consent box.",
+    };
+  }
+
   const githubUrl = String(formData.get("githubUrl") ?? "").trim();
   if (!githubUrl) return { error: "GitHub repository URL is required." };
   const urlHint = githubRepoUrlHint(githubUrl);
