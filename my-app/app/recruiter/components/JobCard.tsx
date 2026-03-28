@@ -31,9 +31,7 @@ export function JobCard({ job }: { job: JobRow }) {
         <span className="text-zinc-500">Posted by {job.recruiter_name}</span>
       </p>
       {job.description ? (
-        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-zinc-400">
-          {job.description}
-        </p>
+        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-zinc-400">{job.description}</p>
       ) : null}
       <div className="mt-5 flex flex-1 flex-col justify-end gap-3 sm:flex-row sm:items-center">
         <Link

@@ -35,8 +35,9 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400 sm:text-xl">
-          Candidates sign in, see jobs that fit their profile, submit resume and GitHub links, then
-          complete a timed video interview transcribed and scored against each posting&apos;s rubric.
+          Candidates sign in, see jobs that fit their profile, submit resume and
+          GitHub links, then complete a timed video interview transcribed and
+          scored against each posting&apos;s rubric.
         </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-stretch">
@@ -47,7 +48,9 @@ export default function Home() {
             <span className="text-xs font-semibold uppercase tracking-wider text-cyan-200/80">
               For candidates
             </span>
-            <span className="mt-2 text-xl font-semibold text-white">Applicant portal</span>
+            <span className="mt-2 text-xl font-semibold text-white">
+              Applicant portal
+            </span>
             <span className="mt-2 text-sm leading-relaxed text-zinc-300">
               Log in, apply, and complete your assessment.
             </span>
@@ -63,16 +66,26 @@ export default function Home() {
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               For hiring teams
             </span>
-            <span className="mt-2 text-xl font-semibold text-white">Recruiter</span>
+            <span className="mt-2 text-xl font-semibold text-white">
+              Recruiter
+            </span>
             <span className="mt-2 text-sm leading-relaxed text-zinc-400">
               Post roles and rubrics (partner flow).
             </span>
-            <span className="mt-4 text-sm font-medium text-zinc-300">Open →</span>
+            <span className="mt-4 text-sm font-medium text-zinc-300">
+              Open →
+            </span>
           </Link>
         </div>
 
-        <section className="mt-16 border-t border-white/10 pt-12" aria-labelledby="flow-heading">
-          <h2 id="flow-heading" className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+        <section
+          className="mt-16 border-t border-white/10 pt-12"
+          aria-labelledby="flow-heading"
+        >
+          <h2
+            id="flow-heading"
+            className="text-sm font-semibold uppercase tracking-wider text-zinc-500"
+          >
             Applicant flow
           </h2>
           <ol className="mt-6 grid gap-4 sm:grid-cols-5">
@@ -81,9 +94,13 @@ export default function Home() {
                 key={s.title}
                 className="relative rounded-xl border border-white/5 bg-white/3 px-4 py-4"
               >
-                <span className="font-mono text-xs text-cyan-500/80">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-mono text-xs text-cyan-500/80">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 <p className="mt-1 font-medium text-white">{s.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{s.desc}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  {s.desc}
+                </p>
               </li>
             ))}
           </ol>
