@@ -6,7 +6,10 @@ const appRoot = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.join(appRoot, "..");
 
 const nextConfig: NextConfig = {
-  /** Hoisted workspace deps (e.g. pdf-parse) live in the repo root node_modules */
+  /**
+   * npm workspaces hoist deps to the repo root. Point Turbopack at the monorepo root so hoisted
+   * packages (pdf-parse, tailwindcss, etc.) resolve. Root `package.json` lists shared tooling deps.
+   */
   turbopack: {
     root: monorepoRoot,
   },
